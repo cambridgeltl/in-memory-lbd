@@ -2,4 +2,10 @@
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-python "$SCRIPTDIR"/runlionlbd.py
+DATADIR="$SCRIPTDIR/data/neoplasms"
+NODES="$DATADIR/nodes.csv"
+EDGES="$DATADIR/edges.csv"
+
+python "$SCRIPTDIR"/runlionlbd.py \
+       --nodes "$NODES" \
+       --edges "$EDGES"
