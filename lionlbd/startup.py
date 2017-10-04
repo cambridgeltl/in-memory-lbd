@@ -15,7 +15,4 @@ logging.debug('node file {}'.format(NODE_FILE))
 logging.debug('edge file {}'.format(EDGE_FILE))
 
 
-_nodes = load_nodes(NODE_FILE)
-_edges = load_edges(EDGE_FILE)
-
-graph = Graph(_nodes, _edges)
+graph = Graph(load_nodes(NODE_FILE), load_edges(EDGE_FILE))
