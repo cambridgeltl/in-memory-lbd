@@ -8,6 +8,7 @@ from logging import debug, info, warn, error
 
 from lionlbd import app
 from lionlbd import graph
+from lionlbd.common import get_filter_type
 
 
 @app.route('/')
@@ -18,8 +19,9 @@ def index():
 
 @app.route('/neighbours/<id_>')
 def get_neighbours(id_):
+    types = get_filter_type()
     try:
-        neighbours = graph.get_neighbours(id_)
+        neighbours = graph.get_neighbours(id_, types=types)
     except KeyError, e:
         warn(e)
         abort(404)

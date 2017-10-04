@@ -33,7 +33,7 @@ class Graph(object):
         self.edges_from = self._create_edge_sequences(
             nodes, edges, self.node_idx_by_id)
 
-    def get_neighbours(self, id_):
+    def get_neighbours(self, id_, types=None):
         """Get neighbours for given node."""
         try:
             idx = self.node_idx_by_id[id_]
@@ -41,9 +41,18 @@ class Graph(object):
             raise KeyError('unknown node id: {}'.format(id_))
         result = []
         nodes, edges = self._nodes, self._edges
+        filter_node = self._get_node_filter(types)
         for n_idx, e_idx in izip(self.neighbours[idx], self.edges_from[idx]):
-            result.append(nodes[n_idx])
+            if not filter_node(n_idx):
+                result.append(nodes[n_idx])
         return result
+
+    def _get_node_filter(self, types=None):
+        if types is None:
+            return lambda n_idx: False
+        else:
+            nodes, types = self._nodes, set(types)
+            return lambda n_idx: nodes[n_idx].type not in types
 
     def stats_str(self):
         """Return Graph statistics as string."""

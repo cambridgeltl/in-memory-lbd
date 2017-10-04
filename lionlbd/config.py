@@ -20,3 +20,6 @@ NODE_FILE = os.path.join(DATA_DIR, 'nodes.csv')
 
 # Edge data to load on startup
 EDGE_FILE = os.path.join(DATA_DIR, 'edges.csv')
+
+# Parameter determining type
+FILTER_TYPE_PARAMETER = 'type'
