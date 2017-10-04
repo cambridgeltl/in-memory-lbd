@@ -12,14 +12,27 @@ from logging import debug, info, warn, error
 
 
 def load_nodes(fn):
+    """Load nodes from Neo4j CSV, return namedtuples."""
     colnames, data = load_csv(fn)
+
     for old, new in (('ID', 'id'), ('LABEL', 'label')):
         _rename_column(colnames, old, new)    # more pythonic names
+
+    # nodes have redundant "id" and "OID" fields; remove the latter
+    try:
+        oid_idx = colnames.index('OID')
+    except ValueError:
+        raise ValueError('expected column OID, got {}'.format(old, colnames))
+    for d in data:
+        del d[oid_idx]
+    del colnames[oid_idx]
+
     class_ = namedtuple('Node', ' '.join(colnames))
     return map(class_._make, data)
 
 
 def load_edges(fn):
+    """Load edges from Neo4j CSV, return namedtuples."""
     colnames, data = load_csv(fn)
     for old, new in (('START_ID', 'start'), ('END_ID', 'end'),
                      ('TYPE', 'type')):
