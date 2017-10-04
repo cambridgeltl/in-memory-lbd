@@ -7,7 +7,19 @@ from flask import request
 
 from logging import debug
 
-from lionlbd.config import FILTER_TYPE_PARAMETER, YEAR_PARAMETER
+from lionlbd.config import YEAR_PARAMETER, METRIC_PARAMETER
+from lionlbd.config import FILTER_TYPE_PARAMETER
+
+
+def get_metric():
+    values = [
+        t for t in request.args.getlist(METRIC_PARAMETER)
+        if t and not t.isspace()
+    ]
+    if not values:
+        return None
+    else:
+        return values[0]
 
 
 def get_filter_type():

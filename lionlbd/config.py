@@ -26,3 +26,10 @@ FILTER_TYPE_PARAMETER = 'type'
 
 # Parameter determining (max) year
 YEAR_PARAMETER = 'year'
+
+# Parameter determining edge scoring metric
+METRIC_PARAMETER = 'edge_metric'
+
+# Naming convention for metrics in edge data
+METRIC_PREFIX = ''
+METRIC_SUFFIX = '_hist'
