@@ -33,7 +33,7 @@ class Graph(object):
         self.edges_from = self._create_edge_sequences(
             nodes, edges, self.node_idx_by_id)
 
-    def get_neighbours(self, id_, types=None):
+    def get_neighbours(self, id_, types=None, max_year=None):
         """Get neighbours for given node."""
         try:
             idx = self.node_idx_by_id[id_]
@@ -42,17 +42,27 @@ class Graph(object):
         result = []
         nodes, edges = self._nodes, self._edges
         filter_node = self._get_node_filter(types)
+        filter_edge = self._get_edge_filter(max_year)
         for n_idx, e_idx in izip(self.neighbours[idx], self.edges_from[idx]):
-            if not filter_node(n_idx):
+            if not filter_node(n_idx) and not filter_edge(e_idx):
                 result.append(nodes[n_idx])
         return result
 
     def _get_node_filter(self, types=None):
+        """Return function determining whether to filter out a node."""
         if types is None:
             return lambda n_idx: False
         else:
             nodes, types = self._nodes, set(types)
             return lambda n_idx: nodes[n_idx].type not in types
+
+    def _get_edge_filter(self, max_year=None):
+        """Return function determining whether to filter out an edge."""
+        if max_year is None:
+            return lambda e_idx: False
+        else:
+            edges = self._edges
+            return lambda e_idx: edges[e_idx].year > max_year
 
     def stats_str(self):
         """Return Graph statistics as string."""

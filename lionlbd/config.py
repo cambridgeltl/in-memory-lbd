@@ -23,3 +23,6 @@ EDGE_FILE = os.path.join(DATA_DIR, 'edges.csv')
 
 # Parameter determining type
 FILTER_TYPE_PARAMETER = 'type'
+
+# Parameter determining (max) year
+YEAR_PARAMETER = 'year'
