@@ -13,14 +13,27 @@ from logging import debug, info, warn, error
 
 def load_nodes(fn):
     colnames, data = load_csv(fn)
+    for old, new in (('ID', 'id'), ('LABEL', 'label')):
+        _rename_column(colnames, old, new)    # more pythonic names
     class_ = namedtuple('Node', ' '.join(colnames))
     return map(class_._make, data)
 
 
 def load_edges(fn):
     colnames, data = load_csv(fn)
+    for old, new in (('START_ID', 'start'), ('END_ID', 'end'),
+                     ('TYPE', 'type')):
+        _rename_column(colnames, old, new)    # more pythonic names
     class_ = namedtuple('Edge', ' '.join(colnames))
     return map(class_._make, data)
+
+
+def _rename_column(colnames, old, new):
+    try:
+        idx = colnames.index(old)
+    except ValueError:
+        raise ValueError('expected column {}, got {}'.format(old, colnames))
+    colnames[idx] = new
 
 
 def load_csv(fn):
