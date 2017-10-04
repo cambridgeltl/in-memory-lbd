@@ -6,16 +6,21 @@ import csv
 
 from array import array
 from itertools import izip
+from collections import namedtuple
 from pydoc import locate
 from logging import debug, info, warn, error
 
 
 def load_nodes(fn):
-    return load_csv(fn)
+    colnames, data = load_csv(fn)
+    class_ = namedtuple('Node', ' '.join(colnames))
+    return map(class_._make, data)
 
 
 def load_edges(fn):
-    return load_csv(fn)
+    colnames, data = load_csv(fn)
+    class_ = namedtuple('Edge', ' '.join(colnames))
+    return map(class_._make, data)
 
 
 def load_csv(fn):
