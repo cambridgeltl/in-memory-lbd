@@ -19,6 +19,8 @@ class Graph(object):
         if not edges:
             raise ValueError('no edges')
 
+        nodes, edges = self._to_directed_graph(nodes, edges)
+
         self._nodes = nodes
         self._edges = edges
         debug('initialized Graph: {}'.format(self.stats_str()))
@@ -76,3 +78,26 @@ class Graph(object):
             start = idx_map[edge.start]
             edges_from[start].append(idx)
         return edges_from
+
+    @staticmethod
+    def _to_directed_graph(nodes, edges):
+        """Given an undirected graph, return a directed equivalent.
+
+        Note: produces shallow copies of edges, leading to referenced
+        objects beings shared between edges.
+        """
+        if not edges:
+            return nodes, edges
+
+        # assume edges are namedtuples and all edges share the index
+        # positions of the START_ID and END_ID values
+        fields = type(edges[0])._fields
+        START, END = fields.index('start'), fields.index('end')
+
+        directed_edges = edges[:]
+        for edge in edges:
+            e_class = type(edge)
+            e_list = list(edge)
+            e_list[START], e_list[END] = e_list[END], e_list[START]
+            directed_edges.append(e_class(*e_list))
+        return nodes, directed_edges
