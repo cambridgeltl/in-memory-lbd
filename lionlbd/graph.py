@@ -71,17 +71,15 @@ class Graph(object):
         limit = limit if limit is not None else len(scores)
 
         if indices_only:
-            return n_indices[:limit]
+            return n_indices[:limit]    # TODO: return without sort?
 
         nodes = self._nodes
         results = []
+        build_result = self._get_result_builder(degree=1, type_='lion')
         for i, idx in enumerate(argsorted, start=1):
             if i > limit:
                 break
-            results.append({
-                'B': nodes[n_indices[idx]].id,
-                'score': scores[idx],
-            })
+            results.append(build_result(n_indices[idx], scores[idx]))
 
         return results
 
@@ -97,7 +95,7 @@ class Graph(object):
         except KeyError:
             raise KeyError('unknown node id: {}'.format(id_))
 
-        agg = _get_agg_function('sum')    # TODO
+        agg = _get_agg_function('avg')    # TODO
         acc = _get_acc_function('max')    # TODO
 
         # TODO: include constraints other than year?
@@ -131,15 +129,13 @@ class Graph(object):
         limit = limit if limit is not None else len(nodes)
 
         results = []
+        build_result = self._get_result_builder(degree=2, type_='lion')
         for idx in argsorted:
             if len(results) >= limit:
                 break
             if not is_c_idx[idx]:
                 continue
-            results.append({
-                'C': nodes[idx].id,
-                'score': score[idx]
-            })
+            results.append(build_result(idx, score[idx]))
         return results
 
     def _get_node_filter(self, types=None):
@@ -173,6 +169,42 @@ class Graph(object):
 
         edges = self._edges
         return lambda e_idx: edges[e_idx][m_idx][offset]
+
+    def _get_result_builder(self, degree=1, type_='id'):
+        """Return function for building result objects."""
+        nodes, edges = self._nodes, self._edges
+
+        def id_only(n_idx, *args):
+            return nodes[n_idx].id
+
+        def lion_1st(n_idx, score, *args):
+            return {
+                'B': nodes[n_idx].id,
+                'B_type': nodes[n_idx].type,
+                'comp': score,
+            }
+
+        def lion_2nd(n_idx, score, *args):
+            return {
+                'C': nodes[n_idx].id,
+                'C_type': nodes[n_idx].type,
+                'comp': score,
+            }
+
+        if type_ == 'id':
+            return id_only
+        elif degree == 1:    # 1st degree (immediate) neighbours
+            if type_ == 'lion':
+                return lion_1st
+            else:
+                raise NotImplementedError('{}/{}'.format(degree, type_))
+        elif degree == 2:
+            if type_ == 'lion':
+                return lion_2nd
+            else:
+                raise NotImplementedError('{}/{}'.format(degree, type_))
+        else:
+            raise NotImplementedError('{}/{}'.format(degree, type_))
 
     def stats_str(self):
         """Return Graph statistics as string."""
@@ -258,6 +290,8 @@ class Graph(object):
 def _get_agg_function(name):
     if name == 'sum':
         return lambda a, b: a + b
+    elif name == 'avg':
+        return lambda a, b: (a + b) / 2.0
     else:
         raise NotImplementedError(name)
 
