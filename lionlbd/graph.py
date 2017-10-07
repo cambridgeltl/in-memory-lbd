@@ -28,7 +28,6 @@ class Graph(object):
 
         self._nodes = nodes
         self._edges = edges
-        debug('initialized Graph: {}'.format(self.stats_str()))
 
         self.node_idx_by_id = self._create_node_idx_mapping(nodes)
 
@@ -42,37 +41,105 @@ class Graph(object):
 
         self.edge_metrics = self._get_metrics(edges[0]) if edges else []
 
+        debug('initialized Graph: {}'.format(self.stats_str()))
+
     @timed
     def get_neighbours(self, id_, metric=None, types=None, year=None,
-                       limit=None):
-        """Get neighbours for given node."""
+                       limit=None, indices_only=False):
+        """Get neighbours of node.
+
+        Args:
+             indices_only: If True, only return neighbour indices.
+        """
         try:
             idx = self.node_idx_by_id[id_]
         except KeyError:
             raise KeyError('unknown node id: {}'.format(id_))
 
-        nodes, edges = self._nodes, self._edges
         filter_node = self._get_node_filter(types)
         filter_edge = self._get_edge_filter(year)
         get_score = self._get_edge_scorer(metric, year)
 
         scores, n_indices = [], []
         for n_idx, e_idx in izip(self.neighbours[idx], self.edges_from[idx]):
-            if not filter_node(n_idx) and not filter_edge(e_idx):
-                scores.append(get_score(e_idx))
-                n_indices.append(n_idx)
+            if filter_node(n_idx) or filter_edge(e_idx):
+                continue
+            scores.append(get_score(e_idx))
+            n_indices.append(n_idx)
 
         argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
         limit = limit if limit is not None else len(scores)
+
+        if indices_only:
+            return n_indices[:limit]
+
+        nodes = self._nodes
         results = []
         for i, idx in enumerate(argsorted, start=1):
             if i > limit:
                 break
             results.append({
+                'B': nodes[n_indices[idx]].id,
                 'score': scores[idx],
-                'B': nodes[n_indices[idx]].id
             })
 
+        return results
+
+    @timed
+    def get_2nd_neighbours(self, id_, metric=None, types=None, year=None,
+                           limit=None):
+        """Get 2nd-degree neighbours of node.
+
+        Excludes the starting node and its 1st-degree neighbours.
+        """
+        try:
+            a_idx = self.node_idx_by_id[id_]
+        except KeyError:
+            raise KeyError('unknown node id: {}'.format(id_))
+
+        agg = _get_agg_function('sum')    # TODO
+        acc = _get_acc_function('max')    # TODO
+
+        # TODO: include constraints other than year?
+        b_indices = self.get_neighbours(id_, year=year, indices_only=True)
+        ab_indices = set(b_indices)
+        ab_indices.add(a_idx)
+
+        filter_node = self._get_node_filter(types)
+        filter_edge = self._get_edge_filter(year)
+        get_score = self._get_edge_scorer(metric, year)
+
+        # accumulate scores by node in array
+        nodes = self._nodes
+        score = [0] * len(nodes)
+        is_c_idx = [0] * len(nodes)
+
+        neighbours, edges_from = self.neighbours, self.edges_from
+        for b_idx, e1_idx in izip(neighbours[a_idx], edges_from[a_idx]):
+            if filter_node(b_idx) or filter_edge(e1_idx):
+                continue
+            e1_score = get_score(e1_idx)
+            for c_idx, e2_idx in izip(neighbours[b_idx], edges_from[b_idx]):
+                if (c_idx in ab_indices or
+                    filter_node(c_idx) or filter_edge(e2_idx)):
+                    continue
+                e2_score = get_score(e2_idx)
+                score[c_idx] = acc(score[c_idx], agg(e1_score, e2_score))
+                is_c_idx[c_idx] = True
+
+        argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
+        limit = limit if limit is not None else len(nodes)
+
+        results = []
+        for idx in argsorted:
+            if len(results) >= limit:
+                break
+            if not is_c_idx[idx]:
+                continue
+            results.append({
+                'C': nodes[idx].id,
+                'score': score[idx]
+            })
         return results
 
     def _get_node_filter(self, types=None):
@@ -186,3 +253,19 @@ class Graph(object):
             debug('metrics for {}({}): {}'.format(
                 type(edge).__name__, type(edge)._fields, metrics))
         return metrics
+
+
+def _get_agg_function(name):
+    if name == 'sum':
+        return lambda a, b: a + b
+    else:
+        raise NotImplementedError(name)
+
+
+def _get_acc_function(name):
+    if name == 'max':
+        return lambda a, b: max(a, b)
+    if name == 'sum':
+        return lambda a, b: a + b
+    else:
+        raise NotImplementedError(name)
