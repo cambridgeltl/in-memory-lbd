@@ -11,6 +11,7 @@ from logging import debug, info, warn, error
 from numpy import argsort
 
 from lionlbd.config import METRIC_PREFIX, METRIC_SUFFIX
+from lionlbd.common import timed
 
 
 class Graph(object):
@@ -41,6 +42,7 @@ class Graph(object):
 
         self.edge_metrics = self._get_metrics(edges[0]) if edges else []
 
+    @timed
     def get_neighbours(self, id_, metric=None, types=None, year=None,
                        limit=None):
         """Get neighbours for given node."""
