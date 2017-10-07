@@ -12,11 +12,15 @@ from logging import debug, info, warn, error
 
 
 def load_nodes(fn):
-    """Load nodes from Neo4j CSV, return namedtuples."""
-    colnames, data = load_csv(fn)
+    """Load nodes from Neo4j CSV, return namedtuples.
 
+    Stores Neo4j types in namedtuple as _field_types list.
+    """
+    colnames, coltypes, data = load_csv(fn)
+
+    # more pythonic names
     for old, new in (('ID', 'id'), ('LABEL', 'label')):
-        _rename_column(colnames, old, new)    # more pythonic names
+        _rename_column(colnames, old, new)
 
     # nodes have redundant "id" and "OID" fields; remove the latter
     try:
@@ -28,16 +32,24 @@ def load_nodes(fn):
     del colnames[oid_idx]
 
     class_ = namedtuple('Node', ' '.join(colnames))
+    class_._field_types = coltypes
     return map(class_._make, data)
 
 
 def load_edges(fn):
-    """Load edges from Neo4j CSV, return namedtuples."""
-    colnames, data = load_csv(fn)
+    """Load edges from Neo4j CSV, return namedtuples.
+
+    Stores Neo4j types in namedtuple as _field_types list.
+    """
+    colnames, coltypes, data = load_csv(fn)
+
+    # more pythonic names
     for old, new in (('START_ID', 'start'), ('END_ID', 'end'),
                      ('TYPE', 'type')):
-        _rename_column(colnames, old, new)    # more pythonic names
+        _rename_column(colnames, old, new)
+
     class_ = namedtuple('Edge', ' '.join(colnames))
+    class_._field_types = coltypes
     return map(class_._make, data)
 
 
@@ -50,12 +62,14 @@ def _rename_column(colnames, old, new):
 
 
 def load_csv(fn):
-    """Load Neo4j CSV."""
+    """Load Neo4j CSV, return lists of column names and types and data."""
     with open(fn) as f:
         reader = csv.reader(f)
         header = next(reader)
-        colnames, parsers = _parse_csv_header(header)
-        debug('parsed header from {}: {}'.format(fn, colnames))
+        colnames, coltypes = _parse_csv_header(header)
+        debug('parsed header from {}: {}'.format(
+            fn, list(zip(colnames, coltypes))))
+        parsers = [_get_parser(t) for t in coltypes]
         data = []
         for row in reader:
             parsed = []
@@ -63,12 +77,12 @@ def load_csv(fn):
                 parsed.append(parser(value))
             data.append(parsed)
         debug('loaded {} rows from {}'.format(len(data), fn))
-        return colnames, data
+        return colnames, coltypes, data
 
 
 def _parse_csv_header(header):
-    """Parser Neo4j CSV header, return list of field names and parsers."""
-    colnames, parsers = [], []
+    """Parser Neo4j CSV header, return lists of column names and types."""
+    colnames, coltypes = [], []
     for col in header:
         if col.startswith(':'):    # handle ":TYPE" etc.
             col = col[1:]
@@ -77,8 +91,8 @@ def _parse_csv_header(header):
         else:    # default type
             name, type_ = col, 'str'
         colnames.append(name)
-        parsers.append(_get_parser(type_))
-    return colnames, parsers
+        coltypes.append(type_)
+    return colnames, coltypes
 
 
 def _get_parser(type_):
