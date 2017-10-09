@@ -18,7 +18,10 @@ class Graph(object):
     """In-memory Neo4j graph."""
 
     def __init__(self, nodes, edges):
-        """Initialize Graph."""
+        """Initialize Graph.
+
+        Note: sorts given lists of nodes and edges.
+        """
         if not nodes:
             raise ValueError('no nodes')
         if not edges:
@@ -26,8 +29,13 @@ class Graph(object):
 
         nodes, edges = self._to_directed_graph(nodes, edges)
 
+        self._sort_nodes_and_edges(nodes, edges)
         self._nodes = nodes
         self._edges = edges
+
+        self.min_year, self.max_year = edges[0].year, edges[-1].year
+        info('min edge year {}, max edge year {}'.format(
+            self.min_year, self.max_year))
 
         self.node_idx_by_id = self._create_node_idx_mapping(nodes)
 
@@ -36,8 +44,6 @@ class Graph(object):
 
         self.edges_from = self._create_edge_sequences(
             nodes, edges, self.node_idx_by_id)
-
-        self.max_year = max(e.year for e in edges)
 
         self.edge_metrics = self._get_metrics(edges[0]) if edges else []
 
@@ -55,6 +61,8 @@ class Graph(object):
             idx = self.node_idx_by_id[id_]
         except KeyError:
             raise KeyError('unknown node id: {}'.format(id_))
+
+        year = self._validate_year(year)
 
         filter_node = self._get_node_filter(types)
         filter_edge = self._get_edge_filter(year)
@@ -94,6 +102,8 @@ class Graph(object):
             a_idx = self.node_idx_by_id[id_]
         except KeyError:
             raise KeyError('unknown node id: {}'.format(id_))
+
+        year = self._validate_year(year)
 
         agg = self._get_agg_function('avg')    # TODO
         acc = self._get_acc_function('max')    # TODO
@@ -138,6 +148,15 @@ class Graph(object):
             results.append(build_result(idx, score[idx]))
         return results
 
+    def _validate_year(self, year):
+        """Verify that given year is a valid value."""
+        if year is None:
+            return year
+        if year < self.min_year or year > self.max_year:
+            # TODO: bound instead of raise?
+            raise ValueError('out of bounds year {}'.format(year))
+        return year
+
     def _get_node_filter(self, types=None):
         """Return function determining whether to filter out a node."""
         if types is None:
@@ -148,8 +167,8 @@ class Graph(object):
 
     def _get_edge_filter(self, max_year=None):
         """Return function determining whether to filter out an edge."""
-        if max_year is None:
-            return lambda e_idx: False
+        if max_year is None or max_year == self.max_year:
+            return lambda e_idx: False    # filter nothing
         else:
             edges = self._edges
             return lambda e_idx: edges[e_idx].year > max_year
@@ -209,6 +228,33 @@ class Graph(object):
     def stats_str(self):
         """Return Graph statistics as string."""
         return '{} nodes, {} edges'.format(len(self._nodes), len(self._edges))
+
+    @staticmethod
+    def _sort_nodes_and_edges(nodes, edges):
+        """Sort node and edge arrays for efficient graph search."""
+
+        # sort edges by year
+        edges.sort(key=lambda e: e.year)
+
+        # for each node, identify earliest year with an edge
+        first_edge_year = {}
+        for edge in edges:
+            for n_id in (edge.start, edge.end):
+                if n_id not in first_edge_year:
+                    first_edge_year[n_id] = edge.year
+        max_year = edges[-1].year
+        edgeless = [n for n in nodes if n.id not in first_edge_year]
+        if edgeless:
+            ids = [n.id for n in edgeless]
+            id_str = (', '.join(ids) if len(ids) < 5 else
+                      ', '.join(ids[:5]) + '...')
+            warn('{} nodes without edges ({})'.format(len(edgeless), ids))
+        for node in edgeless:
+            # sort in after other nodes, otherwise arbitrary order
+            first_edge_year[node.id] = max_year + 1
+
+        # sort nodes by year of earliest edge
+        nodes.sort(key=lambda n: first_edge_year[n.id])
 
     @staticmethod
     def _create_node_idx_mapping(nodes):
