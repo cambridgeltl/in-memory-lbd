@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import re
 import time
 
@@ -57,6 +58,28 @@ def _get_int_argument(name, default=0, minimum=None, maximum=None):
     else:
         return values[0]    # pick first if multiple
 _get_int_argument.re = re.compile(r'^[+-]?[0-9]+$')
+
+
+def _format_usage(usage, unit):
+    """Helper for memory usage functions."""
+    denominator = {
+        'b': 1,
+        'k': 1024.,
+        'm': 1024.**2,
+        'g': 1024.**3,
+    }
+    if unit is None:
+        return usage
+    else:
+        denom = denominator[unit.lower()]
+        return '{:.2f}{}'.format(usage/denom, unit)
+
+
+def memory_usage(unit=None):
+    import psutil
+    process = psutil.Process(os.getpid())
+    usage = process.memory_info().rss
+    return _format_usage(usage, unit)
 
 
 def timed(func, log=info):
