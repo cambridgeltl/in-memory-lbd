@@ -112,7 +112,8 @@ def _is_method(f):
 
 def _func_arg_str(func, *args, **argv):
     """Pretty output helper for decorators."""
-    return '{}({})'.format(_func_name(func, *args), _arg_str(*args, **argv))
+    return '{}({})'.format(_func_name(func, *args),
+                           _arg_str(func, *args, **argv))
 
 
 def _func_name(func, *args):
@@ -123,9 +124,11 @@ def _func_name(func, *args):
         return '{}.{}'.format(type(args[0]).__name__, func.__name__)
 
 
-def _arg_str(*args, **argv):
+def _arg_str(func, *args, **argv):
     """Pretty output helper for decorators."""
     max_args = 1
+    if _is_method(func):
+        args = args[1:]    # skip self
     abbr = args if len(args) <= max_args else args[:max_args] + ('...',)
     s = ', '.join([str(a) for a in abbr] +
                   ['{}={}'.format(k, v) for k, v in argv.items()])
