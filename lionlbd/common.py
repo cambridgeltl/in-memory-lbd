@@ -90,13 +90,16 @@ def timed(func, log=info):
         value = func(*args, **argv)
         end = time.time()
         diff = end-start
-        fstr = _funcstr(func, *args, **argv)
-        total = timed._total[fstr] + diff
-        log('timed {}: {:.2f}s (total {:.2f}s)'.format(fstr, diff, total))
-        timed._total[fstr] += diff
+        fname = _func_name(func, *args)
+        timed._total[fname] += diff
+        timed._count[fname] += 1
+        fstr = _func_arg_str(func, *args, **argv)
+        log('timed {}: {:.2f}s (total {:.2f}s for {})'.format(
+            fstr, diff, timed._total[fname], timed._count[fname]))
         return value
     return wrapper
 timed._total = defaultdict(float)
+timed._count = defaultdict(int)
 
 
 def _is_method(f):
@@ -107,16 +110,20 @@ def _is_method(f):
     return spec.args and spec.args[0] == 'self'
 
 
-def _funcstr(func, *args, **argv):
+def _func_arg_str(func, *args, **argv):
+    """Pretty output helper for decorators."""
+    return '{}({})'.format(_func_name(func, *args), _arg_str(*args, **argv))
+
+
+def _func_name(func, *args):
     """Pretty output helper for decorators."""
     if not _is_method(func):
-        return '{}({})'.format(func.__name__, _argstr(*args, **argv))
+        return func.__name__
     else:
-        return '{}.{}({})'.format(type(args[0]).__name__, func.__name__,
-                                  _argstr(*args[1:], **argv))
+        return '{}.{}'.format(type(args[0]).__name__, func.__name__)
 
 
-def _argstr(*args, **argv):
+def _arg_str(*args, **argv):
     """Pretty output helper for decorators."""
     max_args = 1
     abbr = args if len(args) <= max_args else args[:max_args] + ('...',)
