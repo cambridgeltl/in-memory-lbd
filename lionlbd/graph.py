@@ -95,8 +95,8 @@ class Graph(object):
         except KeyError:
             raise KeyError('unknown node id: {}'.format(id_))
 
-        agg = _get_agg_function('avg')    # TODO
-        acc = _get_acc_function('max')    # TODO
+        agg = self._get_agg_function('avg')    # TODO
+        acc = self._get_acc_function('max')    # TODO
 
         # TODO: include constraints other than year?
         b_indices = self.get_neighbours(id_, year=year, indices_only=True)
@@ -286,20 +286,20 @@ class Graph(object):
                 type(edge).__name__, type(edge)._fields, metrics))
         return metrics
 
+    @staticmethod
+    def _get_agg_function(name):
+        if name == 'sum':
+            return lambda a, b: a + b
+        elif name == 'avg':
+            return lambda a, b: (a + b) / 2.0
+        else:
+            raise NotImplementedError(name)
 
-def _get_agg_function(name):
-    if name == 'sum':
-        return lambda a, b: a + b
-    elif name == 'avg':
-        return lambda a, b: (a + b) / 2.0
-    else:
-        raise NotImplementedError(name)
-
-
-def _get_acc_function(name):
-    if name == 'max':
-        return lambda a, b: max(a, b)
-    if name == 'sum':
-        return lambda a, b: a + b
-    else:
-        raise NotImplementedError(name)
+    @staticmethod
+    def _get_acc_function(name):
+        if name == 'max':
+            return lambda a, b: max(a, b)
+        if name == 'sum':
+            return lambda a, b: a + b
+        else:
+            raise NotImplementedError(name)
