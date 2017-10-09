@@ -10,7 +10,7 @@ import logging
 from lionlbd.config import NODE_FILE, EDGE_FILE
 from lionlbd.neo4jcsv import load_nodes, load_edges
 from lionlbd.graph import Graph
-from lionlbd.common import memory_usage
+from lionlbd.common import timed, memory_usage
 
 
 def parse_args():
@@ -28,6 +28,10 @@ args = parse_args()
 logging.debug('node file {}'.format(args.nodes))
 logging.debug('edge file {}'.format(args.edges))
 
-graph = Graph(load_nodes(args.nodes), load_edges(args.edges))
+@timed
+def load_graph(node_file, edge_file):
+    return Graph(load_nodes(node_file), load_edges(edge_file))
+
+graph = load_graph(args.nodes, args.edges)
 
 logging.info('graph loaded, using {} memory'.format(memory_usage('M')))

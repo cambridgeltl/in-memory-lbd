@@ -10,7 +10,10 @@ from collections import namedtuple
 from pydoc import locate
 from logging import debug, info, warn, error
 
+from common import timed
 
+
+@timed
 def load_nodes(fn):
     """Load nodes from Neo4j CSV, return namedtuples.
 
@@ -36,6 +39,7 @@ def load_nodes(fn):
     return map(class_._make, data)
 
 
+@timed
 def load_edges(fn):
     """Load edges from Neo4j CSV, return namedtuples.
 
