@@ -12,6 +12,7 @@ from numpy import argsort
 
 from lionlbd.config import METRIC_PREFIX, METRIC_SUFFIX
 from lionlbd.common import timed
+from lionlbd.neo4jcsv import transpose
 
 
 class Graph(object):
@@ -32,6 +33,9 @@ class Graph(object):
         self._sort_nodes_and_edges(nodes, edges)
         self._nodes = nodes
         self._edges = edges
+
+        self._tnodes = transpose(nodes)
+        self._tedges = transpose(edges)
 
         self.min_year, self.max_year = edges[0].year, edges[-1].year
         info('min edge year {}, max edge year {}'.format(

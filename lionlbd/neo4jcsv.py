@@ -2,6 +2,9 @@
 
 # Functions for reading Neo4j CSV.
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import csv
 
 from array import array
@@ -10,7 +13,7 @@ from collections import namedtuple
 from pydoc import locate
 from logging import debug, info, warn, error
 
-from common import timed
+from lionlbd.common import timed
 
 
 @timed
@@ -33,6 +36,7 @@ def load_nodes(fn):
     for d in data:
         del d[oid_idx]
     del colnames[oid_idx]
+    del coltypes[oid_idx]
 
     class_ = namedtuple('Node', ' '.join(colnames))
     class_._field_types = coltypes
@@ -82,6 +86,32 @@ def load_csv(fn):
             data.append(parsed)
         debug('loaded {} rows from {}'.format(len(data), fn))
         return colnames, coltypes, data
+
+
+def transpose(namedtuples):
+    """Switch rows and columns in list of namedtuples with field types.
+
+    Requires _field_types static variable as assigned by load_nodes()
+    and load_edges().
+    """
+    if not namedtuples:
+        raise ValueError('no namedtuples')
+    class_ = type(namedtuples[0])
+    try:
+        field_types = class_._field_types
+    except:
+        raise ValueError('expected namedtuple with _field_types, got {}'\
+                         .format(namedtuples[0]))
+    field_names = class_._fields
+    transposed = []
+    for i, type_ in enumerate(field_types):
+        if type_ in (int, float):
+            tc = array_type_code(type_)
+            a = array(tc, [t[i] for t in namedtuples])
+        else:
+            a = [t[i] for t in namedtuples]
+        transposed.append(a)
+    return class_(*transposed)
 
 
 def _parse_csv_header(header):
