@@ -5,7 +5,7 @@ set -eu
 if [ "$#" -lt 1 ]; then
     year=2017
 else
-    year=`shift`
+    year="$1"
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
