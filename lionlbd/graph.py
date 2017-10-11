@@ -183,7 +183,7 @@ class Graph(object):
             return lambda e_idx: False    # filter nothing
         else:
             edge_year = self._tedges.year
-            return lambda e_idx: edges_year[e_idx] > max_year
+            return lambda e_idx: edge_year[e_idx] > max_year
 
     def _get_edge_scorer(self, metric=None, year=None):
         """Return function returning score for edge."""
