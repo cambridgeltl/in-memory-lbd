@@ -2,6 +2,12 @@
 
 set -eu
 
+if [ "$#" -lt 1 ]; then
+    year=2017
+else
+    year=`shift`
+fi
+
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DATADIR="$SCRIPTDIR/data/"
 OUTDIR="$SCRIPTDIR/outputs/"
@@ -13,7 +19,6 @@ URL="http://127.0.0.1:8080/neighbours2"
 NAME_ID_FILE="$DATADIR/Shamith-genes.txt"
 
 metric="count"
-year=2017
 types=Gene
 
 cat "$NAME_ID_FILE" | while read l; do
