@@ -5,6 +5,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+from array import array
 from itertools import izip
 from logging import debug, info, warn, error
 
@@ -112,19 +113,27 @@ class Graph(object):
         agg = self._get_agg_function('avg')    # TODO
         acc = self._get_acc_function('max')    # TODO
 
-        # TODO: include constraints other than year?
-        b_indices = self.get_neighbours(id_, year=year, indices_only=True)
-        ab_indices = set(b_indices)
-        ab_indices.add(a_idx)
-
         filter_node = self._get_node_filter(types)
         filter_edge = self._get_edge_filter(year)
         get_score = self._get_edge_scorer(metric, year)
 
-        # accumulate scores by node in array
         nodes = self._nodes
-        score = [0] * len(nodes)
-        is_c_idx = [0] * len(nodes)
+
+        # Flag nodes to exclude for fast access in inner loop.
+        exclude_idx = array('b', [0]) * len(nodes)
+        # TODO: include constraints other than year?
+        b_indices = self.get_neighbours(id_, year=year, indices_only=True)
+        for b_idx in b_indices:
+            exclude_idx[b_idx] = 1
+        exclude_idx[a_idx] = 1
+
+        # TODO: skip this loop if there is no node filter
+        for i in range(len(nodes)):
+            exclude_idx[i] |= filter_node(i)
+
+        # accumulate scores by node in array
+        score = array('f', [0]) * len(nodes)
+        is_c_idx = array('b', [0]) * len(nodes)
 
         neighbours, edges_from = self.neighbours, self.edges_from
         for b_idx, e1_idx in izip(neighbours[a_idx], edges_from[a_idx]):
@@ -132,8 +141,7 @@ class Graph(object):
                 continue
             e1_score = get_score(e1_idx)
             for c_idx, e2_idx in izip(neighbours[b_idx], edges_from[b_idx]):
-                if (c_idx in ab_indices or
-                    filter_node(c_idx) or filter_edge(e2_idx)):
+                if (exclude_idx[c_idx] or filter_edge(e2_idx)):
                     continue
                 e2_score = get_score(e2_idx)
                 score[c_idx] = acc(score[c_idx], agg(e1_score, e2_score))
