@@ -166,16 +166,16 @@ class Graph(object):
         if types is None:
             return lambda n_idx: False
         else:
-            nodes, types = self._nodes, set(types)
-            return lambda n_idx: nodes[n_idx].type not in types
+            node_types, types = self._tnodes.type, set(types)
+            return lambda n_idx: node_types[n_idx] not in types
 
     def _get_edge_filter(self, max_year=None):
         """Return function determining whether to filter out an edge."""
         if max_year is None or max_year == self.max_year:
             return lambda e_idx: False    # filter nothing
         else:
-            edges = self._edges
-            return lambda e_idx: edges[e_idx].year > max_year
+            edge_year = self._tedges.year
+            return lambda e_idx: edges_year[e_idx] > max_year
 
     def _get_edge_scorer(self, metric=None, year=None):
         """Return function returning score for edge."""
@@ -190,27 +190,28 @@ class Graph(object):
             raise ValueError('unknown metric {}'.format(metric))
         m_idx, m_type = idx_type[metric]
 
-        edges = self._edges
-        return lambda e_idx: edges[e_idx][m_idx][offset]
+        edge_metrics = self._tedges[m_idx]
+        return lambda e_idx: edge_metrics[e_idx][offset]
 
     def _get_result_builder(self, degree=1, type_='id'):
         """Return function for building result objects."""
-        nodes, edges = self._nodes, self._edges
+        node_id = self._tnodes.id
+        node_type = self._tnodes.type
 
         def id_only(n_idx, *args):
-            return nodes[n_idx].id
+            return node_id[n_idx]
 
         def lion_1st(n_idx, score, *args):
             return {
-                'B': nodes[n_idx].id,
-                'B_type': nodes[n_idx].type,
+                'B': node_id[n_idx],
+                'B_type': node_type[n_idx],
                 'comp': score,
             }
 
         def lion_2nd(n_idx, score, *args):
             return {
-                'C': nodes[n_idx].id,
-                'C_type': nodes[n_idx].type,
+                'C': node_id[n_idx],
+                'C_type': node_type[n_idx],
                 'comp': score,
             }
 
