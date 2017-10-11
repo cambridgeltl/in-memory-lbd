@@ -30,7 +30,7 @@ def get_neighbours(id_):
     year = get_year()
     types = get_filter_type()
     try:
-        result = graph.get_neighbours(
+        result = graph.neighbours(
             id_,
             metric=metric,
             year=year,
@@ -49,7 +49,7 @@ def get_2nd_neighbours(id_):
     year = get_year()
     types = get_filter_type()
     try:
-        result = graph.get_2nd_neighbours(
+        result = graph.open_discovery(
             id_,
             metric=metric,
             year=year,

@@ -44,7 +44,7 @@ class Graph(object):
 
         self.node_idx_by_id = self._create_node_idx_mapping(nodes)
 
-        self.neighbours = self._create_neighbour_sequences(
+        self._neighbour_idx = self._create_neighbour_sequences(
             nodes, edges, self.node_idx_by_id)
 
         self.edges_from = self._create_edge_sequences(
@@ -58,9 +58,9 @@ class Graph(object):
         debug('initialized Graph: {}'.format(self.stats_str()))
 
     @timed
-    def get_neighbours(self, id_, metric=None, types=None, year=None,
-                       limit=None, indices_only=False):
-        """Get neighbours of node.
+    def neighbours(self, id_, metric=None, types=None, year=None,
+                   limit=None, indices_only=False):
+        """Return neighbours of node.
 
         Args:
              indices_only: If True, only return neighbour indices.
@@ -77,9 +77,9 @@ class Graph(object):
         get_score = self._get_edge_scorer(metric, year)
 
         scores, n_indices = [], []
-        neighbours = self.neighbours
+        neighbour_idx = self._neighbour_idx
         scores_from = self._get_score_sequence(metric, year)
-        for n_idx, e_score in izip(self.neighbours[idx], scores_from[idx]):
+        for n_idx, e_score in izip(neighbour_idx[idx], scores_from[idx]):
             if filter_node(n_idx):
                 continue
             scores.append(e_score)
@@ -102,8 +102,8 @@ class Graph(object):
         return results
 
     @timed
-    def get_2nd_neighbours(self, id_, metric=None, types=None, year=None,
-                           limit=None):
+    def open_discovery(self, id_, metric=None, types=None, year=None,
+                       limit=None):
         """Get 2nd-degree neighbours of node.
 
         Excludes the starting node and its 1st-degree neighbours.
@@ -127,7 +127,7 @@ class Graph(object):
         # Flag nodes to exclude for fast access in inner loop.
         exclude_idx = array('b', [0]) * len(nodes)
         # TODO: include constraints other than year?
-        b_indices = self.get_neighbours(id_, year=year, indices_only=True)
+        b_indices = self.neighbours(id_, year=year, indices_only=True)
         for b_idx in b_indices:
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
@@ -140,12 +140,12 @@ class Graph(object):
         score = array('f', [0]) * len(nodes)
         is_c_idx = array('b', [0]) * len(nodes)
 
-        neighbours = self.neighbours
+        neighbour_idx = self._neighbour_idx
         scores_from = self._get_score_sequence(metric, year)
-        for b_idx, e1_score in izip(neighbours[a_idx], scores_from[a_idx]):
+        for b_idx, e1_score in izip(neighbour_idx[a_idx], scores_from[a_idx]):
             if filter_node(b_idx):
                 continue
-            for c_idx, e2_score in izip(neighbours[b_idx], scores_from[b_idx]):
+            for c_idx, e2_score in izip(neighbour_idx[b_idx], scores_from[b_idx]):
                 if exclude_idx[c_idx]:
                     continue
                 score[c_idx] = acc(score[c_idx], agg(e1_score, e2_score))
@@ -249,6 +249,7 @@ class Graph(object):
         else:
             raise NotImplementedError('{}/{}'.format(degree, type_))
 
+    @timed
     def _get_score_sequence(self, metric, year):
         if metric not in self.scores_by_metric_and_year:
             self.scores_by_metric_and_year[metric] = {}
@@ -312,11 +313,11 @@ class Graph(object):
     def _create_neighbour_sequences(nodes, edges, idx_map):
         """Create index-based mapping from node to neighbouring nodes."""
         # TODO: consider arrays instead of lists
-        neighbours = [[] for _ in xrange(len(nodes))]
+        neighbour_idx = [[] for _ in xrange(len(nodes))]
         for edge in edges:
             start, end = idx_map[edge.start], idx_map[edge.end]
-            neighbours[start].append(end)
-        return neighbours
+            neighbour_idx[start].append(end)
+        return neighbour_idx
 
     @staticmethod
     def _create_edge_sequences(nodes, edges, idx_map):
