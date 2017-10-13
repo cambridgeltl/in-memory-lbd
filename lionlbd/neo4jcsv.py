@@ -102,7 +102,6 @@ def transpose(namedtuples):
     except:
         raise ValueError('expected namedtuple with _field_types, got {}'\
                          .format(namedtuples[0]))
-    field_names = class_._fields
     transposed = []
     for i, type_ in enumerate(field_types):
         if type_ in (int, float):

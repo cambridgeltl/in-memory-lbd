@@ -13,7 +13,7 @@ from numpy import argsort
 
 from lionlbd.config import METRIC_PREFIX, METRIC_SUFFIX
 from lionlbd.common import timed
-from lionlbd.neo4jcsv import transpose
+from lionlbd.neo4jcsv import transpose, array_type_code
 
 
 class Graph(object):
@@ -32,28 +32,34 @@ class Graph(object):
         nodes, edges = self._to_directed_graph(nodes, edges)
 
         self._sort_nodes_and_edges(nodes, edges)
-        self._nodes = nodes
-        self._edges = edges
 
-        self._tnodes = transpose(nodes)
-        self._tedges = transpose(edges)
+        self.node_idx_by_id = self._create_node_idx_mapping(nodes)
 
         self.min_year, self.max_year = edges[0].year, edges[-1].year
         info('min edge year {}, max edge year {}'.format(
             self.min_year, self.max_year))
 
-        self.node_idx_by_id = self._create_node_idx_mapping(nodes)
+        self.edge_metrics = self._get_edge_metrics(edges[0])
+
+        self._nodes = nodes
+        self._edges = edges
+
+        self._nodes_t = transpose(nodes)
+        self._edges_t = transpose(edges)
+        self._edges_t = self._ids_to_indices(self._edges_t, self.node_idx_by_id)
+
+        self._weights_by_metric_and_year = self._group_by_year(
+            self._edges_t, self.edge_metrics)
 
         self._neighbour_idx = self._create_neighbour_sequences(
-            nodes, edges, self.node_idx_by_id)
+            len(nodes), self._edges_t)
 
+        # TODO is this needed?
         self.edges_from = self._create_edge_sequences(
-            nodes, edges, self.node_idx_by_id)
+            len(nodes), self._edges_t)
 
-        self.edge_metrics = self._get_edge_metrics(edges[0]) if edges else []
-
-        self.scores_by_metric_and_year = {}    # lazy init
-        self._get_score_sequence('count', self.max_year)    # precache (TODO)
+        self.weights_from_cache = {}    # lazy init
+        self._get_weights_from('count', self.max_year)    # precache (TODO)
 
         debug('initialized Graph: {}'.format(self.stats_str()))
 
@@ -74,15 +80,14 @@ class Graph(object):
         year = self._validate_year(year)
 
         filter_node = self._get_node_filter(types)
-        get_score = self._get_edge_scorer(metric, year)
 
         scores, n_indices = [], []
         neighbour_idx = self._neighbour_idx
-        scores_from = self._get_score_sequence(metric, year)
-        for n_idx, e_score in izip(neighbour_idx[idx], scores_from[idx]):
+        weights_from = self._get_weights_from(metric, year)
+        for n_idx, e_weight in izip(neighbour_idx[idx], weights_from[idx]):
             if filter_node(n_idx):
                 continue
-            scores.append(e_score)
+            scores.append(e_weight)
             n_indices.append(n_idx)
 
         argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
@@ -120,7 +125,6 @@ class Graph(object):
         acc = self._get_acc_function('max')    # TODO
 
         filter_node = self._get_node_filter(types)
-        get_score = self._get_edge_scorer(metric, year)
 
         nodes = self._nodes
 
@@ -141,14 +145,14 @@ class Graph(object):
         is_c_idx = array('b', [0]) * len(nodes)
 
         neighbour_idx = self._neighbour_idx
-        scores_from = self._get_score_sequence(metric, year)
-        for b_idx, e1_score in izip(neighbour_idx[a_idx], scores_from[a_idx]):
+        weights_from = self._get_weights_from(metric, year)
+        for b_idx, e1_weight in izip(neighbour_idx[a_idx], weights_from[a_idx]):
             if filter_node(b_idx):
                 continue
-            for c_idx, e2_score in izip(neighbour_idx[b_idx], scores_from[b_idx]):
+            for c_idx, e2_weight in izip(neighbour_idx[b_idx], weights_from[b_idx]):
                 if exclude_idx[c_idx]:
                     continue
-                score[c_idx] = acc(score[c_idx], agg(e1_score, e2_score))
+                score[c_idx] = acc(score[c_idx], agg(e1_weight, e2_weight))
                 is_c_idx[c_idx] = True
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
@@ -195,27 +199,13 @@ class Graph(object):
         if types is None:
             return lambda n_idx: False
         else:
-            node_types, types = self._tnodes.type, set(types)
+            node_types, types = self._nodes_t.type, set(types)
             return lambda n_idx: node_types[n_idx] not in types
-
-    def _get_edge_scorer(self, metric, year):
-        """Return function returning score for edge."""
-        assert metric is not None and year is not None, 'internal error'
-
-        offset = year - self.max_year - 1
-
-        idx_type = { m: (i, type_) for i, m, type_ in self.edge_metrics }
-        if metric not in idx_type:
-            raise ValueError('unknown metric {}'.format(metric))
-        m_idx, m_type = idx_type[metric]
-
-        edge_metrics = self._tedges[m_idx]
-        return lambda e_idx: edge_metrics[e_idx][offset]
 
     def _get_result_builder(self, degree=1, type_='id'):
         """Return function for building result objects."""
-        node_id = self._tnodes.id
-        node_type = self._tnodes.type
+        node_id = self._nodes_t.id
+        node_type = self._nodes_t.type
 
         def id_only(n_idx, *args):
             return node_id[n_idx]
@@ -250,23 +240,23 @@ class Graph(object):
             raise NotImplementedError('{}/{}'.format(degree, type_))
 
     @timed
-    def _get_score_sequence(self, metric, year):
-        if metric not in self.scores_by_metric_and_year:
-            self.scores_by_metric_and_year[metric] = {}
-        if year not in self.scores_by_metric_and_year[metric]:
+    def _get_weights_from(self, metric, year):
+        if metric not in self.weights_from_cache:
+            self.weights_from_cache[metric] = {}
+        if year not in self.weights_from_cache[metric]:
             # lazy init
-            info('calculating scores for metric {}, year {} ...'.format(
+            info('calculating weights_from for metric {}, year {} ...'.format(
                 metric, year))
-            idx_map = self.node_idx_by_id
-            get_score = self._get_edge_scorer(metric, year)
-            scores_from = [[] for _ in xrange(len(self._nodes))]
-            for idx, edge in enumerate(self._edges):
-                if edge.year > year:
+            # idx_map = self.node_idx_by_id
+            weights_by_idx = self._weights_by_metric_and_year[metric][year]
+            weights_from = [[] for _ in xrange(len(self._nodes))]
+            for idx, start in enumerate(self._edges_t.start):
+                if self._edges_t.year[idx] > year:
                     break    # edges sorted by year
-                start = idx_map[edge.start]
-                scores_from[start].append(get_score(idx))
-            self.scores_by_metric_and_year[metric][year] = scores_from
-        return self.scores_by_metric_and_year[metric][year]
+                # start = idx_map[edge.start]
+                weights_from[start].append(weights_by_idx[idx])
+            self.weights_from_cache[metric][year] = weights_from
+        return self.weights_from_cache[metric][year]
 
     def stats_str(self):
         """Return Graph statistics as string."""
@@ -310,22 +300,65 @@ class Graph(object):
         return node_idx_by_id
 
     @staticmethod
-    def _create_neighbour_sequences(nodes, edges, idx_map):
-        """Create index-based mapping from node to neighbouring nodes."""
-        # TODO: consider arrays instead of lists
-        neighbour_idx = [[] for _ in xrange(len(nodes))]
-        for edge in edges:
-            start, end = idx_map[edge.start], idx_map[edge.end]
+    def _ids_to_indices(edges_t, node_idx_by_id):
+        """Replace node ids with indices in edge data.
+
+        Note:
+            Expects edges_t to be result of transpose(edges).
+        """
+        edges_d = edges_t._asdict()
+        # TODO: consider arrays
+        edges_d['start'] = [node_idx_by_id[i] for i in edges_t.start]
+        edges_d['end'] = [node_idx_by_id[i] for i in edges_t.end]
+        class_ = type(edges_t)
+        return class_(**edges_d)
+
+    @staticmethod
+    def _group_by_year(edges_t, edge_metrics):
+        """Group metric values by year.
+
+        Note:
+            Expects edges_t to be result of transpose(edges) and sorted by year.
+        """
+        min_year, max_year = edges_t.year[0], edges_t.year[-1]
+        weights_by_metric_and_year = {}
+        for m_idx, m_name, m_type in edge_metrics:
+            weights_by_year = {}
+            weights_by_edge_and_year = edges_t[m_idx]
+            for year in range(min_year, max_year+1):
+                weights = []
+                year_idx = year - max_year - 1
+                for e_idx, e_year in enumerate(edges_t.year):
+                    if e_year > year:
+                        break    # edges sorted by year
+                    weights.append(weights_by_edge_and_year[e_idx][year_idx])
+                weights_by_year[year] = array(
+                    array_type_code(m_type), weights)
+            weights_by_metric_and_year[m_name] = weights_by_year
+        return weights_by_metric_and_year
+
+    @staticmethod
+    def _create_neighbour_sequences(node_count, edges_t):
+        """Create index-based mapping from node to neighbouring nodes.
+
+        Note:
+            Expects edges_t to be result of _ids_to_indices(transpose(edges)).
+        """
+        neighbour_idx = [[] for _ in xrange(node_count)]
+        for start, end in izip(edges_t.start, edges_t.end):
             neighbour_idx[start].append(end)
         return neighbour_idx
 
     @staticmethod
-    def _create_edge_sequences(nodes, edges, idx_map):
-        """Create index-based mapping from node to edges."""
+    def _create_edge_sequences(node_count, edges_t):
+        """Create index-based mapping from node to edges.
+
+        Note:
+            Expects edges_t to be result of _ids_to_indices(transpose(edges)).
+        """
         # TODO: consider arrays instead of lists
-        edges_from = [[] for _ in xrange(len(nodes))]
-        for idx, edge in enumerate(edges):
-            start = idx_map[edge.start]
+        edges_from = [[] for _ in xrange(node_count)]
+        for idx, start in enumerate(edges_t.start):
             edges_from[start].append(idx)
         return edges_from
 
@@ -340,7 +373,7 @@ class Graph(object):
             return nodes, edges
 
         # assume edges are namedtuples and all edges share the index
-        # positions of the START_ID and END_ID values
+        # positions of the start and end values
         fields = type(edges[0])._fields
         START, END = fields.index('start'), fields.index('end')
 
