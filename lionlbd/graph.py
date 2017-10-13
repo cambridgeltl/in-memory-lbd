@@ -253,12 +253,11 @@ class Graph(object):
             weights_by_idx = self._weights_by_metric_and_year[metric][year]
             type_code = array_type_code(self._metric_type(metric))
             node_count = len(self._nodes_t.id)
-            weights_from = [[] for _ in xrange(node_count)]
+            weights_from = [array(type_code) for _ in xrange(node_count)]
             for idx, start in enumerate(self._edges_t.start):
                 if self._edges_t.year[idx] > year:
                     break    # edges sorted by year
                 weights_from[start].append(weights_by_idx[idx])
-            weights_from = [array(type_code, w) for w in weights_from]
             self._weights_from_cache[metric][year] = weights_from
         return self._weights_from_cache[metric][year]
 
@@ -313,8 +312,8 @@ class Graph(object):
             Expects edges_t to be result of transpose(edges).
         """
         edges_d = edges_t._asdict()
-        edges_d['start'] = array('i',[node_idx_by_id[i] for i in edges_t.start])
-        edges_d['end'] = array('i', [node_idx_by_id[i] for i in edges_t.end])
+        edges_d['start'] = array('i',(node_idx_by_id[i] for i in edges_t.start))
+        edges_d['end'] = array('i', (node_idx_by_id[i] for i in edges_t.end))
         class_ = type(edges_t)
         return class_(**edges_d)
 
@@ -331,14 +330,13 @@ class Graph(object):
             weights_by_year = {}
             weights_by_edge_and_year = edges_t[m_idx]
             for year in range(min_year, max_year+1):
-                weights = []
+                weights = array(array_type_code(m_type))
                 year_idx = year - max_year - 1
                 for e_idx, e_year in enumerate(edges_t.year):
                     if e_year > year:
                         break    # edges sorted by year
                     weights.append(weights_by_edge_and_year[e_idx][year_idx])
-                weights_by_year[year] = array(
-                    array_type_code(m_type), weights)
+                weights_by_year[year] = weights
             weights_by_metric_and_year[m_name] = weights_by_year
         return weights_by_metric_and_year
 
@@ -361,10 +359,9 @@ class Graph(object):
         Note:
             Expects edges_t to be result of _ids_to_indices(transpose(edges)).
         """
-        neighbour_idx = [[] for _ in xrange(node_count)]
+        neighbour_idx = [array('i') for _ in xrange(node_count)]
         for start, end in izip(edges_t.start, edges_t.end):
             neighbour_idx[start].append(end)
-        neighbour_idx = [array('i', i) for i in neighbour_idx]
         return neighbour_idx
 
     @staticmethod
@@ -374,10 +371,9 @@ class Graph(object):
         Note:
             Expects edges_t to be result of _ids_to_indices(transpose(edges)).
         """
-        edges_from = [[] for _ in xrange(node_count)]
+        edges_from = [array('i') for _ in xrange(node_count)]
         for idx, start in enumerate(edges_t.start):
             edges_from[start].append(idx)
-        edges_from = [array('i', i) for i in edges_from]
         return edges_from
 
     @staticmethod
