@@ -357,6 +357,7 @@ class Graph(object):
         neighbour_idx = [[] for _ in xrange(node_count)]
         for start, end in izip(edges_t.start, edges_t.end):
             neighbour_idx[start].append(end)
+        neighbour_idx = [array('i', i) for i in neighbour_idx]
         return neighbour_idx
 
     @staticmethod
