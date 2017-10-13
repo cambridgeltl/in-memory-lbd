@@ -173,6 +173,13 @@ class Graph(object):
         """
         return [name for index, name, type_ in self._metrics]
 
+    def _metric_type(self, metric):
+        """Return type of values for metric (e.g. float)."""
+        for index, name, type_ in self._metrics:
+            if name == metric:
+                return type_
+        raise ValueError(metric)
+
     def _validate_year(self, year):
         """Verify that given year is valid, apply default if None."""
         if year is None:
@@ -243,15 +250,15 @@ class Graph(object):
             # lazy init
             info('calculating weights_from for metric {}, year {} ...'.format(
                 metric, year))
-            # idx_map = self.node_idx_by_id
             weights_by_idx = self._weights_by_metric_and_year[metric][year]
+            type_code = array_type_code(self._metric_type(metric))
             node_count = len(self._nodes_t.id)
             weights_from = [[] for _ in xrange(node_count)]
             for idx, start in enumerate(self._edges_t.start):
                 if self._edges_t.year[idx] > year:
                     break    # edges sorted by year
-                # start = idx_map[edge.start]
                 weights_from[start].append(weights_by_idx[idx])
+            weights_from = [array(type_code, w) for w in weights_from]
             self._weights_from_cache[metric][year] = weights_from
         return self._weights_from_cache[metric][year]
 
