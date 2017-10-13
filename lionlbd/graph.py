@@ -177,7 +177,6 @@ class Graph(object):
         if year is None:
             return self.max_year
         if year < self.min_year or year > self.max_year:
-            # TODO: bound instead of raise?
             raise ValueError('out of bounds year {}'.format(year))
         return year
 
@@ -263,7 +262,7 @@ class Graph(object):
 
     @staticmethod
     def _sort_nodes_and_edges(nodes, edges):
-        """Sort node and edge arrays for efficient graph search."""
+        """Sort node and edge arrays for efficient storage and search."""
 
         # sort edges by year
         edges.sort(key=lambda e: e.year)
@@ -306,9 +305,8 @@ class Graph(object):
             Expects edges_t to be result of transpose(edges).
         """
         edges_d = edges_t._asdict()
-        # TODO: consider arrays
-        edges_d['start'] = [node_idx_by_id[i] for i in edges_t.start]
-        edges_d['end'] = [node_idx_by_id[i] for i in edges_t.end]
+        edges_d['start'] = array('i',[node_idx_by_id[i] for i in edges_t.start])
+        edges_d['end'] = array('i', [node_idx_by_id[i] for i in edges_t.end])
         class_ = type(edges_t)
         return class_(**edges_d)
 
@@ -355,10 +353,10 @@ class Graph(object):
         Note:
             Expects edges_t to be result of _ids_to_indices(transpose(edges)).
         """
-        # TODO: consider arrays instead of lists
         edges_from = [[] for _ in xrange(node_count)]
         for idx, start in enumerate(edges_t.start):
             edges_from[start].append(idx)
+        edges_from = [array('i', i) for i in edges_from]
         return edges_from
 
     @staticmethod
