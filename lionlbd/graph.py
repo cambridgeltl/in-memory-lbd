@@ -39,23 +39,24 @@ class Graph(object):
         info('min edge year {}, max edge year {}'.format(
             self.min_year, self.max_year))
 
-        self.edge_metrics = self._get_edge_metrics(edges[0])
+        self._metrics = self._get_edge_metrics(edges[0])
 
         self._nodes_t = transpose(nodes)
         self._edges_t = transpose(edges)
         self._edges_t = self._ids_to_indices(self._edges_t, self.node_idx_by_id)
 
         self._weights_by_metric_and_year = self._group_by_year(
-            self._edges_t, self.edge_metrics)
+            self._edges_t, self._metrics)
+        self._edges_t = self._remove_metrics(self._edges_t, self._metrics)
 
         self._neighbour_idx = self._create_neighbour_sequences(
             len(nodes), self._edges_t)
 
         # TODO is this needed?
-        self.edges_from = self._create_edge_sequences(
+        self._edges_from = self._create_edge_sequences(
             len(nodes), self._edges_t)
 
-        self.weights_from_cache = {}    # lazy init
+        self._weights_from_cache = {}    # lazy init
         self._get_weights_from('count', self.max_year)    # precache (TODO)
 
         debug('initialized Graph: {}'.format(self.stats_str()))
@@ -170,7 +171,7 @@ class Graph(object):
         Returns:
             list of str: edge metric names.
         """
-        return [name for index, name, type_ in self.edge_metrics]
+        return [name for index, name, type_ in self._metrics]
 
     def _validate_year(self, year):
         """Verify that given year is valid, apply default if None."""
@@ -236,9 +237,9 @@ class Graph(object):
 
     @timed
     def _get_weights_from(self, metric, year):
-        if metric not in self.weights_from_cache:
-            self.weights_from_cache[metric] = {}
-        if year not in self.weights_from_cache[metric]:
+        if metric not in self._weights_from_cache:
+            self._weights_from_cache[metric] = {}
+        if year not in self._weights_from_cache[metric]:
             # lazy init
             info('calculating weights_from for metric {}, year {} ...'.format(
                 metric, year))
@@ -251,8 +252,8 @@ class Graph(object):
                     break    # edges sorted by year
                 # start = idx_map[edge.start]
                 weights_from[start].append(weights_by_idx[idx])
-            self.weights_from_cache[metric][year] = weights_from
-        return self.weights_from_cache[metric][year]
+            self._weights_from_cache[metric][year] = weights_from
+        return self._weights_from_cache[metric][year]
 
     def stats_str(self):
         """Return Graph statistics as string."""
@@ -311,7 +312,7 @@ class Graph(object):
         return class_(**edges_d)
 
     @staticmethod
-    def _group_by_year(edges_t, edge_metrics):
+    def _group_by_year(edges_t, metrics):
         """Group metric values by year.
 
         Note:
@@ -319,7 +320,7 @@ class Graph(object):
         """
         min_year, max_year = edges_t.year[0], edges_t.year[-1]
         weights_by_metric_and_year = {}
-        for m_idx, m_name, m_type in edge_metrics:
+        for m_idx, m_name, m_type in metrics:
             weights_by_year = {}
             weights_by_edge_and_year = edges_t[m_idx]
             for year in range(min_year, max_year+1):
@@ -333,6 +334,18 @@ class Graph(object):
                     array_type_code(m_type), weights)
             weights_by_metric_and_year[m_name] = weights_by_year
         return weights_by_metric_and_year
+
+    @staticmethod
+    def _remove_metrics(edges_t, metrics):
+        """Remove metrics from transposed edges.
+
+        Use with _group_by_year(), avoids storing metrics redundantly.
+        """
+        edges_l = list(edges_t)
+        for m_idx, m_name, m_type in metrics:
+            edges_l[m_idx] = None
+        class_ = type(edges_t)
+        return class_(*edges_l)
 
     @staticmethod
     def _create_neighbour_sequences(node_count, edges_t):
