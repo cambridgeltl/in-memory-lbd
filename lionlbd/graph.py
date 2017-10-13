@@ -407,7 +407,10 @@ class Graph(object):
             if (field.startswith(METRIC_PREFIX) and
                 field.endswith(METRIC_SUFFIX)):
                 value = edge[index]
-                name = field[len(METRIC_PREFIX):-len(METRIC_SUFFIX)]
+                if METRIC_SUFFIX:
+                    name = field[len(METRIC_PREFIX):-len(METRIC_SUFFIX)]
+                else:
+                    name = field[len(METRIC_PREFIX):]
                 try:
                     type_ = type(value[0])    # assume sequence
                 except:
