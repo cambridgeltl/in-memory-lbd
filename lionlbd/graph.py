@@ -41,9 +41,6 @@ class Graph(object):
 
         self.edge_metrics = self._get_edge_metrics(edges[0])
 
-        self._nodes = nodes
-        self._edges = edges
-
         self._nodes_t = transpose(nodes)
         self._edges_t = transpose(edges)
         self._edges_t = self._ids_to_indices(self._edges_t, self.node_idx_by_id)
@@ -96,7 +93,6 @@ class Graph(object):
         if indices_only:
             return n_indices[:limit]    # TODO: return without sort?
 
-        nodes = self._nodes
         results = []
         build_result = self._get_result_builder(degree=1, type_='lion')
         for i, idx in enumerate(argsorted, start=1):
@@ -126,10 +122,10 @@ class Graph(object):
 
         filter_node = self._get_node_filter(types)
 
-        nodes = self._nodes
+        node_count = len(self._nodes_t.id)
 
         # Flag nodes to exclude for fast access in inner loop.
-        exclude_idx = array('b', [0]) * len(nodes)
+        exclude_idx = array('b', [0]) * node_count
         # TODO: include constraints other than year?
         b_indices = self.neighbours(id_, year=year, indices_only=True)
         for b_idx in b_indices:
@@ -137,12 +133,12 @@ class Graph(object):
         exclude_idx[a_idx] = 1
 
         # TODO: skip this loop if there is no node filter
-        for i in range(len(nodes)):
+        for i in range(node_count):
             exclude_idx[i] |= filter_node(i)
 
         # accumulate scores by node in array
-        score = array('f', [0]) * len(nodes)
-        is_c_idx = array('b', [0]) * len(nodes)
+        score = array('f', [0]) * node_count
+        is_c_idx = array('b', [0]) * node_count
 
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
@@ -156,7 +152,7 @@ class Graph(object):
                 is_c_idx[c_idx] = True
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
-        limit = limit if limit is not None else len(nodes)
+        limit = limit if limit is not None else node_count
 
         results = []
         build_result = self._get_result_builder(degree=2, type_='lion')
@@ -249,7 +245,8 @@ class Graph(object):
                 metric, year))
             # idx_map = self.node_idx_by_id
             weights_by_idx = self._weights_by_metric_and_year[metric][year]
-            weights_from = [[] for _ in xrange(len(self._nodes))]
+            node_count = len(self._nodes_t.id)
+            weights_from = [[] for _ in xrange(node_count)]
             for idx, start in enumerate(self._edges_t.start):
                 if self._edges_t.year[idx] > year:
                     break    # edges sorted by year
@@ -260,7 +257,9 @@ class Graph(object):
 
     def stats_str(self):
         """Return Graph statistics as string."""
-        return '{} nodes, {} edges'.format(len(self._nodes), len(self._edges))
+        node_count = len(self._nodes_t.id)
+        edge_count = len(self._edges_t.start)
+        return '{} nodes, {} edges'.format(node_count, edge_count)
 
     @staticmethod
     def _sort_nodes_and_edges(nodes, edges):
