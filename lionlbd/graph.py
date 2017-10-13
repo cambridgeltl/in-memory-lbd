@@ -33,17 +33,18 @@ class Graph(object):
 
         self._sort_nodes_and_edges(nodes, edges)
 
-        self.node_idx_by_id = self._create_node_idx_mapping(nodes)
+        self._node_idx_by_id = self._create_node_idx_mapping(nodes)
 
-        self.min_year, self.max_year = edges[0].year, edges[-1].year
+        self._min_year, self._max_year = edges[0].year, edges[-1].year
         info('min edge year {}, max edge year {}'.format(
-            self.min_year, self.max_year))
+            self._min_year, self._max_year))
 
         self._metrics = self._get_edge_metrics(edges[0])
 
         self._nodes_t = transpose(nodes)
         self._edges_t = transpose(edges)
-        self._edges_t = self._ids_to_indices(self._edges_t, self.node_idx_by_id)
+        self._edges_t = self._ids_to_indices(
+            self._edges_t, self._node_idx_by_id)
 
         self._weights_by_metric_and_year = self._group_by_year(
             self._edges_t, self._metrics)
@@ -57,7 +58,7 @@ class Graph(object):
             len(nodes), self._edges_t)
 
         self._weights_from_cache = {}    # lazy init
-        self._get_weights_from('count', self.max_year)    # precache (TODO)
+        self._get_weights_from('count', self._max_year)    # precache (TODO)
 
         debug('initialized Graph: {}'.format(self.stats_str()))
 
@@ -69,10 +70,7 @@ class Graph(object):
         Args:
              indices_only: If True, only return neighbour indices.
         """
-        try:
-            idx = self.node_idx_by_id[id_]
-        except KeyError:
-            raise KeyError('unknown node id: {}'.format(id_))
+        idx = self._get_node_idx(id_)
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
@@ -104,16 +102,13 @@ class Graph(object):
         return results
 
     @timed
-    def open_discovery(self, id_, metric=None, types=None, year=None,
+    def open_discovery(self, a_id, metric=None, types=None, year=None,
                        limit=None):
         """Get 2nd-degree neighbours of node.
 
         Excludes the starting node and its 1st-degree neighbours.
         """
-        try:
-            a_idx = self.node_idx_by_id[id_]
-        except KeyError:
-            raise KeyError('unknown node id: {}'.format(id_))
+        a_idx = self._get_node_idx(a_id)
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
@@ -128,7 +123,7 @@ class Graph(object):
         # Flag nodes to exclude for fast access in inner loop.
         exclude_idx = array('b', [0]) * node_count
         # TODO: include constraints other than year?
-        b_indices = self.neighbours(id_, year=year, indices_only=True)
+        b_indices = self.neighbours(a_id, year=year, indices_only=True)
         for b_idx in b_indices:
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
@@ -173,6 +168,13 @@ class Graph(object):
         """
         return [name for index, name, type_ in self._metrics]
 
+    def _get_node_idx(self, id_):
+        try:
+            idx = self._node_idx_by_id[id_]
+        except KeyError:
+            raise KeyError('unknown node id: {}'.format(id_))
+        return idx
+
     def _metric_type(self, metric):
         """Return type of values for metric (e.g. float)."""
         for index, name, type_ in self._metrics:
@@ -183,8 +185,8 @@ class Graph(object):
     def _validate_year(self, year):
         """Verify that given year is valid, apply default if None."""
         if year is None:
-            return self.max_year
-        if year < self.min_year or year > self.max_year:
+            return self._max_year
+        if year < self._min_year or year > self._max_year:
             raise ValueError('out of bounds year {}'.format(year))
         return year
 
