@@ -47,6 +47,9 @@ class Graph(object):
         self._edges_t = transpose(edges)
         nodes, edges = None, None    # release
 
+        self._node_type_map = self._create_binary_type_map(self._nodes_t)
+        self._nodes_t = self._map_types(self._nodes_t, self._node_type_map)
+
         self._edges_t = self._ids_to_indices(
             self._edges_t, self._node_idx_by_id)
 
@@ -62,6 +65,8 @@ class Graph(object):
             self._node_count, self._edges_t)
 
         self._weights_from_cache = {}    # lazy init
+        # for year in range(self._min_year, self._max_year+1):
+        #     self._get_weights_from('count', year)    # precache (TODO)
         self._get_weights_from('count', self._max_year)    # precache (TODO)
 
         debug('initialized Graph: {}'.format(self.stats_str()))
@@ -232,13 +237,17 @@ class Graph(object):
         if types is None:
             return lambda n_idx: False
         else:
-            node_types, types = self._nodes_t.type, set(types)
-            return lambda n_idx: node_types[n_idx] not in types
+            type_bits = [self._node_type_map[t] for t in types]
+            type_mask = reduce(lambda x,y: x|y, type_bits)
+            # debug('type_mask {} for {}'.format(type_mask, types))
+            node_types = self._nodes_t.type
+            return lambda n_idx: not (node_types[n_idx] & type_mask)
 
     def _get_result_builder(self, degree=1, type_='id'):
         """Return function for building result objects."""
         node_id = self._nodes_t.id
         node_type = self._nodes_t.type
+        inv_type_map = { v: k for k, v in self._node_type_map.items() }
 
         def id_only(n_idx, *args):
             return node_id[n_idx]
@@ -246,14 +255,14 @@ class Graph(object):
         def lion_1st(n_idx, score, *args):
             return {
                 'B': node_id[n_idx],
-                'B_type': node_type[n_idx],
+                'B_type': inv_type_map[node_type[n_idx]],
                 'comp': score,
             }
 
         def lion_2nd(n_idx, score, *args):
             return {
                 'C': node_id[n_idx],
-                'C_type': node_type[n_idx],
+                'C_type': inv_type_map[node_type[n_idx]],
                 'comp': score,
             }
 
@@ -331,6 +340,31 @@ class Graph(object):
                 raise ValueError('duplicate node ID {}'.format(node.id))
             node_idx_by_id[node.id] = idx
         return node_idx_by_id
+
+    @staticmethod
+    def _create_binary_type_map(nodes_t):
+        """Create binary encoding of node types.
+
+        Note:
+            Expects nodes_t to be result of transpose(nodes).
+        """
+        types = sorted(list(set(nodes_t.type)))
+        info('types: {}'.format(types))
+        type_map = { t: 1<<i for i, t in enumerate(types) }
+        debug('binary type mapping: {}'.format(type_map))
+        return type_map
+
+    @staticmethod
+    def _map_types(nodes_t, type_map):
+        """Replace node types with values from given map.
+
+        Note:
+            Expects nodes_t to be result of transpose(nodes).
+        """
+        nodes_d = nodes_t._asdict()
+        nodes_d['type'] = array('i', (type_map[t] for t in nodes_t.type))
+        class_ = type(nodes_t)
+        return class_(**nodes_d)
 
     @staticmethod
     def _ids_to_indices(edges_t, node_idx_by_id):
