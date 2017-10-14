@@ -48,10 +48,25 @@ def open_discovery_core(int a_idx,
         for c_idx, e2_weight in izip(neighbour_idx[b_idx], weights_from[b_idx]):
             if c_exclude_idx[c_idx]:
                 continue
-            #c_score[c_idx] = acc(c_score[c_idx], agg(e1_weight, e2_weight))
             c_score[c_idx] = c_acc(c_score[c_idx], c_agg(e1_weight, e2_weight))
             c_is_c_idx[c_idx] = 1
 
+
+@timed
+def mark_type_filtered(array.array is_excluded, array.array node_type,
+                       types, type_map):
+    """Mark nodes whose types are not in the given list."""
+    if types is None:
+        return
+    if not set(type_map.keys()) - set(types):
+        return    # all types included
+
+    cdef signed char[:] c_is_excluded = is_excluded
+    cdef int[:] c_node_type = node_type
+    cdef int type_mask = reduce(lambda x,y: x|y, (type_map[t] for t in types))
+    cdef int i
+    for i in range(len(is_excluded)):
+        is_excluded[i] |= not (c_node_type[i] & type_mask)
 
 
 cdef float _agg_func_avg(float e1_score, float e2_score):

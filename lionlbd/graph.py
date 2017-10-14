@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import pyximport; pyximport.install()
-from lionlbd.cgraph import open_discovery_core
+from lionlbd.cgraph import open_discovery_core, mark_type_filtered
 
 from array import array
 from itertools import izip
@@ -146,9 +146,8 @@ class Graph(object):
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
 
-        # TODO: skip this loop if there is no node filter
-        for i in range(node_count):
-            exclude_idx[i] |= filter_node(i)
+        mark_type_filtered(exclude_idx, self._nodes_t.type, types,
+                           self._node_type_map)
 
         # accumulate scores by node in array
         score = array('f', [0]) * node_count
