@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import pyximport; pyximport.install()
-from lionlbd.cgraph import open_discovery_core, mark_type_filtered
+from lionlbd.cgraph import open_discovery_core, mark_type_filtered, reindex_int
 
 from array import array
 from itertools import izip
@@ -288,15 +288,11 @@ class Graph(object):
             # lazy init
             info('calculating weights_from for metric {}, year {} ...'.format(
                 metric, year))
-            weights_by_idx = self._weights_by_metric_and_year[metric][year]
+            edge_weight = self._weights_by_metric_and_year[metric][year]
             type_code = array_type_code(self._metric_type(metric))
-            node_count = self._node_count
-            weights_from = [array(type_code) for _ in xrange(node_count)]
-            for idx, start in enumerate(self._edges_t.start):
-                if self._edges_t.year[idx] > year:
-                    break    # edges sorted by year
-                weights_from[start].append(weights_by_idx[idx])
-            self._weights_from_cache[metric][year] = weights_from
+            idx_after = bisect(self._edges_t.year, year)    # sorted by year
+            self._weights_from_cache[metric][year] = reindex_int(
+                self._node_count, self._edges_t.start, edge_weight, idx_after)
         return self._weights_from_cache[metric][year]
 
     def stats_str(self):

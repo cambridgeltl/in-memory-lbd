@@ -69,6 +69,20 @@ def mark_type_filtered(array.array is_excluded, array.array node_type,
         is_excluded[i] |= not (c_node_type[i] & type_mask)
 
 
+@timed
+def reindex_int(int idx_count, int[:] idx_seq, int[:] val_seq, int limit):
+    """Return a such that a[i] holds val_seq[j] where idx_seq[j] == i.
+
+    Used e.g. to organize edge weights into lists indexed by the
+    starting node index.
+    """
+    cdef int i
+    cdef list reindexed = [array.array('i') for _ in xrange(idx_count)]
+    for i in xrange(limit):
+        reindexed[idx_seq[i]].append(val_seq[i])
+    return reindexed
+
+
 cdef float _agg_func_avg(float e1_score, float e2_score):
     return (e1_score + e2_score) / 2.0
 
