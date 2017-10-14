@@ -10,6 +10,7 @@ from lionlbd.cgraph import open_discovery_core
 
 from array import array
 from itertools import izip
+from bisect import bisect
 from logging import debug, info, warn, error
 
 from numpy import argsort
@@ -379,6 +380,7 @@ class Graph(object):
         return class_(**edges_d)
 
     @staticmethod
+    @timed
     def _group_by_year(edges_t, metrics):
         """Group metric values by year.
 
@@ -388,16 +390,14 @@ class Graph(object):
         min_year, max_year = edges_t.year[0], edges_t.year[-1]
         weights_by_metric_and_year = {}
         for m_idx, m_name, m_type in metrics:
+            type_code = array_type_code(m_type)
             weights_by_year = {}
-            weights_by_edge_and_year = edges_t[m_idx]
+            metric_weights = edges_t[m_idx]
             for year in range(min_year, max_year+1):
-                weights = array(array_type_code(m_type))
-                year_idx = year - max_year - 1
-                for e_idx, e_year in enumerate(edges_t.year):
-                    if e_year > year:
-                        break    # edges sorted by year
-                    weights.append(weights_by_edge_and_year[e_idx][year_idx])
-                weights_by_year[year] = weights
+                y = year - max_year - 1
+                idx_after = bisect(edges_t.year, year)    # edges sorted by year
+                weights_by_year[year] = array(
+                    type_code, (metric_weights[i][y] for i in range(idx_after)))
             weights_by_metric_and_year[m_name] = weights_by_year
         return weights_by_metric_and_year
 
