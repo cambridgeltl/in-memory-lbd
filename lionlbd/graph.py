@@ -158,7 +158,7 @@ class Graph(object):
 
         open_discovery_core(a_idx, neighbour_idx, weights_from, score,
                             is_c_idx, exclude_idx, filter_node,
-                            agg, acc)
+                            'avg', 'max')    # TODO types
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count
