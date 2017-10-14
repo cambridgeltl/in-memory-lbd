@@ -5,6 +5,9 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import pyximport; pyximport.install()
+from lionlbd.cgraph import open_discovery_core
+
 from array import array
 from itertools import izip
 from logging import debug, info, warn, error
@@ -152,14 +155,10 @@ class Graph(object):
 
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
-        for b_idx, e1_weight in izip(neighbour_idx[a_idx], weights_from[a_idx]):
-            if filter_node(b_idx):
-                continue
-            for c_idx, e2_weight in izip(neighbour_idx[b_idx], weights_from[b_idx]):
-                if exclude_idx[c_idx]:
-                    continue
-                score[c_idx] = acc(score[c_idx], agg(e1_weight, e2_weight))
-                is_c_idx[c_idx] = True
+
+        open_discovery_core(a_idx, neighbour_idx, weights_from, score,
+                            is_c_idx, exclude_idx, filter_node,
+                            agg, acc)
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count
