@@ -30,6 +30,8 @@ class Graph(object):
             raise ValueError('no edges')
 
         nodes, edges = self._to_directed_graph(nodes, edges)
+        self._node_count = len(nodes)
+        self._edge_count = len(edges)
 
         self._sort_nodes_and_edges(nodes, edges)
 
@@ -43,6 +45,8 @@ class Graph(object):
 
         self._nodes_t = transpose(nodes)
         self._edges_t = transpose(edges)
+        nodes, edges = None, None    # release
+
         self._edges_t = self._ids_to_indices(
             self._edges_t, self._node_idx_by_id)
 
@@ -51,11 +55,11 @@ class Graph(object):
         self._edges_t = self._remove_metrics(self._edges_t, self._metrics)
 
         self._neighbour_idx = self._create_neighbour_sequences(
-            len(nodes), self._edges_t)
+            self._node_count, self._edges_t)
 
         # TODO is this needed?
         self._edges_from = self._create_edge_sequences(
-            len(nodes), self._edges_t)
+            self._node_count, self._edges_t)
 
         self._weights_from_cache = {}    # lazy init
         self._get_weights_from('count', self._max_year)    # precache (TODO)
@@ -123,7 +127,7 @@ class Graph(object):
 
         filter_node = self._get_node_filter(types)
 
-        node_count = len(self._nodes_t.id)
+        node_count = self._node_count
 
         # Flag nodes to exclude for fast access in inner loop.
         exclude_idx = array('b', [0]) * node_count
@@ -278,7 +282,7 @@ class Graph(object):
                 metric, year))
             weights_by_idx = self._weights_by_metric_and_year[metric][year]
             type_code = array_type_code(self._metric_type(metric))
-            node_count = len(self._nodes_t.id)
+            node_count = self._node_count
             weights_from = [array(type_code) for _ in xrange(node_count)]
             for idx, start in enumerate(self._edges_t.start):
                 if self._edges_t.year[idx] > year:
@@ -289,9 +293,7 @@ class Graph(object):
 
     def stats_str(self):
         """Return Graph statistics as string."""
-        node_count = len(self._nodes_t.id)
-        edge_count = len(self._edges_t.start)
-        return '{} nodes, {} edges'.format(node_count, edge_count)
+        return '{} nodes, {} edges'.format(self._node_count, self._edge_count)
 
     @staticmethod
     def _sort_nodes_and_edges(nodes, edges):
