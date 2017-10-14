@@ -138,10 +138,12 @@ def _func_name(func, *args):
 
 def _arg_str(func, *args, **argv):
     """Pretty output helper for decorators."""
-    max_args = 1
+    max_args, max_len = 1, 1
     if _is_method(func):
         args = args[1:]    # skip self
     abbr = args if len(args) <= max_args else args[:max_args] + ('...',)
+    abbr = [a if not (isinstance(a, list) and len(a) > max_len)
+            else str(a[:max_len]) + '...' for a in abbr]
     s = ', '.join([str(a) for a in abbr] +
                   ['{}={}'.format(k, v) for k, v in argv.items()])
     if len(s) > 80:
