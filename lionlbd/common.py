@@ -7,6 +7,7 @@ import time
 
 from flask import request
 
+from array import array
 from functools import wraps
 from collections import defaultdict
 from logging import debug, info
@@ -142,7 +143,7 @@ def _arg_str(func, *args, **argv):
     if _is_method(func):
         args = args[1:]    # skip self
     abbr = args if len(args) <= max_args else args[:max_args] + ('...',)
-    abbr = [a if not (isinstance(a, list) and len(a) > max_len)
+    abbr = [a if not (isinstance(a, (list, tuple, array)) and len(a) > max_len)
             else str(a[:max_len]) + '...' for a in abbr]
     s = ', '.join([str(a) for a in abbr] +
                   ['{}={}'.format(k, v) for k, v in argv.items()])
