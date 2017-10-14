@@ -13,6 +13,7 @@ from logging import debug, info
 
 from lionlbd.config import YEAR_PARAMETER, METRIC_PARAMETER
 from lionlbd.config import FILTER_TYPE_PARAMETER
+from lionlbd.config import LIMIT_PARAMETER, OFFSET_PARAMETER
 
 
 def get_metric():
@@ -40,6 +41,14 @@ def get_filter_type():
 
 def get_year():
     return _get_int_argument(YEAR_PARAMETER, default=None)
+
+
+def get_limit():
+    return _get_int_argument(LIMIT_PARAMETER, default=None)
+
+
+def get_offset():
+    return _get_int_argument(OFFSET_PARAMETER, default=0)
 
 
 def _get_int_argument(name, default=0, minimum=None, maximum=None):

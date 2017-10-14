@@ -30,6 +30,12 @@ YEAR_PARAMETER = 'year'
 # Parameter determining edge scoring metric
 METRIC_PARAMETER = 'edge_metric'
 
+# Parameter determining maximum number of results to return
+LIMIT_PARAMETER = 'limit'
+
+# Parameter determining offset of first result to return
+OFFSET_PARAMETER = 'offset'
+
 # Naming convention for metrics in edge data
 METRIC_PREFIX = ''
 METRIC_SUFFIX = '_hist'

@@ -9,6 +9,7 @@ from logging import debug, info, warn, error
 from lionlbd import app
 from lionlbd import graph
 from lionlbd.common import get_metric, get_year, get_filter_type
+from lionlbd.common import get_limit, get_offset
 
 
 @app.route('/')
@@ -29,12 +30,16 @@ def get_neighbours(id_):
     metric = get_metric()
     year = get_year()
     types = get_filter_type()
+    limit = get_limit()
+    offset = get_offset()
     try:
         result = graph.neighbours(
             id_,
             metric=metric,
             year=year,
-            types=types
+            types=types,
+            limit=limit,
+            offset=offset
         )
     except KeyError, e:
         warn(e)
@@ -48,12 +53,16 @@ def get_2nd_neighbours(id_):
     metric = get_metric()
     year = get_year()
     types = get_filter_type()
+    limit = get_limit()
+    offset = get_offset()
     try:
         result = graph.open_discovery(
             id_,
             metric=metric,
             year=year,
-            types=types
+            types=types,
+            limit=limit,
+            offset=offset
         )
     except KeyError, e:
         warn(e)

@@ -64,7 +64,7 @@ class Graph(object):
 
     @timed
     def neighbours(self, id_, metric=None, types=None, year=None,
-                   limit=None, indices_only=False):
+                   limit=None, offset=0, indices_only=False):
         """Return neighbours of node.
 
         Args:
@@ -74,6 +74,8 @@ class Graph(object):
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
+        limit = self._validate_limit(limit)
+        offset = self._validate_offset(offset)
 
         filter_node = self._get_node_filter(types)
 
@@ -87,23 +89,24 @@ class Graph(object):
             n_indices.append(n_idx)
 
         argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
-        limit = limit if limit is not None else len(scores)
+        end_idx = offset+limit if limit is not None else len(scores)
 
         if indices_only:
-            return n_indices[:limit]    # TODO: return without sort?
+            return n_indices[offset:end_idx]    # TODO: return without sort?
 
         results = []
         build_result = self._get_result_builder(degree=1, type_='lion')
         for i, idx in enumerate(argsorted, start=1):
-            if i > limit:
+            if i > end_idx:
                 break
-            results.append(build_result(n_indices[idx], scores[idx]))
+            if i > offset:
+                results.append(build_result(n_indices[idx], scores[idx]))
 
         return results
 
     @timed
     def open_discovery(self, a_id, metric=None, types=None, year=None,
-                       limit=None):
+                       limit=None, offset=0):
         """Get 2nd-degree neighbours of node.
 
         Excludes the starting node and its 1st-degree neighbours.
@@ -112,6 +115,8 @@ class Graph(object):
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
+        limit = self._validate_limit(limit)
+        offset = self._validate_offset(offset)
 
         agg = self._get_agg_function('avg')    # TODO
         acc = self._get_acc_function('max')    # TODO
@@ -149,15 +154,18 @@ class Graph(object):
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count
+        end_idx = offset+limit if limit is not None else len(scores)
 
-        results = []
+        results, result_idx = [], 0
         build_result = self._get_result_builder(degree=2, type_='lion')
         for idx in argsorted:
             if len(results) >= limit:
                 break
             if not is_c_idx[idx]:
                 continue
-            results.append(build_result(idx, score[idx]))
+            if result_idx >= offset:
+                results.append(build_result(idx, score[idx]))
+            result_idx += 1
         return results
 
     def get_metrics(self):
@@ -186,9 +194,25 @@ class Graph(object):
         """Verify that given year is valid, apply default if None."""
         if year is None:
             return self._max_year
-        if year < self._min_year or year > self._max_year:
+        elif year < self._min_year or year > self._max_year:
             raise ValueError('out of bounds year {}'.format(year))
         return year
+
+    def _validate_limit(self, limit):
+        """Verify that given limit is valid."""
+        if limit is None:
+            return limit    # None is valid
+        elif limit <= 0:
+            raise ValueError('out of bounds limit {}'.format(limit))
+        return limit
+
+    def _validate_offset(self, offset):
+        """Verify that given offset is valid, apply default if None"""
+        if offset is None:
+            return 0
+        elif offset < 0:
+            raise ValueError('out of bounds offset {}'.format(offset))
+        return offset
 
     def _validate_metric(self, metric):
         """Verify that given metric is valid, apply default if None."""
