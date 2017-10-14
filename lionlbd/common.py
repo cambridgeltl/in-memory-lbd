@@ -115,8 +115,11 @@ def _is_method(f):
     """Return True if f is a method, False otherwise."""
     from inspect import getargspec
     # https://stackoverflow.com/a/19315046
-    spec = getargspec(f)
-    return spec.args and spec.args[0] == 'self'
+    try:
+        spec = getargspec(f)
+        return spec.args and spec.args[0] == 'self'
+    except TypeError:    # fails for cython functions
+        return False    # default
 
 
 def _func_arg_str(func, *args, **argv):
