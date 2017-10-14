@@ -57,9 +57,13 @@ class Graph(object):
         self._edges_t = self._ids_to_indices(
             self._edges_t, self._node_idx_by_id)
 
-        self._weights_by_metric_and_year = self._group_by_year(
-            self._edges_t, self._metrics)
-        self._edges_t = self._remove_metrics(self._edges_t, self._metrics)
+        self._weights_by_metric_and_year = {}
+        for m_idx, m_name, m_type in self._metrics:
+            self._weights_by_metric_and_year[m_name] = self._group_by_year(
+                m_name, m_type, self._edges_t[m_idx], self._edges_t.year,
+                self._min_year, self._max_year)
+            self._edges_t = self._remove_metric(
+                m_name, self._edges_t, self._metrics)
 
         self._neighbour_idx = self._create_neighbour_sequences(
             self._node_count, self._edges_t)
@@ -376,35 +380,32 @@ class Graph(object):
 
     @staticmethod
     @timed
-    def _group_by_year(edges_t, metrics):
+    def _group_by_year(name, m_type, edge_weights, edge_years, min_year,
+                       max_year):
         """Group metric values by year.
 
         Note:
             Expects edges_t to be result of transpose(edges) and sorted by year.
         """
-        min_year, max_year = edges_t.year[0], edges_t.year[-1]
-        weights_by_metric_and_year = {}
-        for m_idx, m_name, m_type in metrics:
-            type_code = array_type_code(m_type)
-            weights_by_year = {}
-            metric_weights = edges_t[m_idx]
-            for year in range(min_year, max_year+1):
-                y = year - max_year - 1
-                idx_after = bisect(edges_t.year, year)    # edges sorted by year
-                weights_by_year[year] = array(
-                    type_code, (metric_weights[i][y] for i in range(idx_after)))
-            weights_by_metric_and_year[m_name] = weights_by_year
-        return weights_by_metric_and_year
+        type_code = array_type_code(m_type)
+        weights_by_year = {}
+        for year in range(min_year, max_year+1):
+            y_idx = year - max_year - 1
+            idx_limit = bisect(edge_years, year)    # edges sorted by year
+            weights_by_year[year] = array(
+                type_code, (edge_weights[i][y_idx] for i in range(idx_limit)))
+        return weights_by_year
 
     @staticmethod
-    def _remove_metrics(edges_t, metrics):
-        """Remove metrics from transposed edges.
+    def _remove_metric(name, edges_t, metrics):
+        """Remove metric from transposed edges.
 
         Use with _group_by_year(), avoids storing metrics redundantly.
         """
         edges_l = list(edges_t)
         for m_idx, m_name, m_type in metrics:
-            edges_l[m_idx] = None
+            if m_name == name:
+                edges_l[m_idx] = None
         class_ = type(edges_t)
         return class_(*edges_l)
 
