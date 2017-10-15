@@ -42,12 +42,20 @@ def open_discovery_core(int a_idx,
     cdef agg_func_t c_agg = _get_agg_function(agg)
     cdef agg_func_t c_acc = _get_acc_function(acc)
 
-    for b_idx, e1_weight in izip(neighbour_idx[a_idx], weights_from[a_idx]):
+    cdef int i1, i2, i1_limit, i2_limit
+
+    i1_limit = min((len(neighbour_idx[a_idx]), len(weights_from[a_idx])))
+    for i1 in xrange(i1_limit):
+        b_idx = neighbour_idx[a_idx][i1]
         if filter_node(b_idx):
             continue
-        for c_idx, e2_weight in izip(neighbour_idx[b_idx], weights_from[b_idx]):
+        e1_weight = weights_from[a_idx][i1]
+        i2_limit = min((len(neighbour_idx[b_idx]), len(weights_from[b_idx])))
+        for i2 in xrange(i2_limit):
+            c_idx = neighbour_idx[b_idx][i2]
             if c_exclude_idx[c_idx]:
                 continue
+            e2_weight = weights_from[b_idx][i2]
             c_score[c_idx] = c_acc(c_score[c_idx], c_agg(e1_weight, e2_weight))
             c_is_c_idx[c_idx] = 1
 
