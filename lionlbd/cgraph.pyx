@@ -20,9 +20,9 @@ ctypedef float (*agg_func_t)(float e1_score, float e2_score)
 ctypedef float (*acc_func_t)(float accumulated, float score)
 
 
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
 @timed
+@cython.wraparound(False)
+@cython.boundscheck(False)
 def open_discovery_core(int a_idx,
                         list neighbour_idx,
                         list weights_from,
