@@ -6,7 +6,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import pyximport; pyximport.install()
-from lionlbd.cgraph import open_discovery_core, mark_type_filtered, reindex_int
+from lionlbd.cgraph import open_discovery_core, mark_type_filtered
+from lionlbd.cgraph import reindex_float
 
 from array import array
 from itertools import izip
@@ -295,7 +296,7 @@ class Graph(object):
             edge_weight = self._weights_by_metric_and_year[metric][year]
             type_code = array_type_code(self._metric_type(metric))
             idx_after = bisect(self._edges_t.year, year)    # sorted by year
-            self._weights_from_cache[metric][year] = reindex_int(
+            self._weights_from_cache[metric][year] = reindex_float(
                 self._node_count, self._edges_t.start, edge_weight, idx_after)
         return self._weights_from_cache[metric][year]
 
@@ -388,6 +389,9 @@ class Graph(object):
             Expects edges_t to be result of transpose(edges) and sorted by year.
         """
         type_code = array_type_code(m_type)
+        if type_code != 'f':
+            warn('converting weight type {} to float'.format(type_code))
+            type_code = 'f'
         weights_by_year = {}
         for year in range(min_year, max_year+1):
             y_idx = year - max_year - 1
