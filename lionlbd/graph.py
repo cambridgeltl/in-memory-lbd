@@ -19,10 +19,13 @@ from numpy import argsort
 from lionlbd.config import METRIC_PREFIX, METRIC_SUFFIX
 from lionlbd.common import timed
 from lionlbd.neo4jcsv import transpose, array_type_code
+from lionlbd.lbdinterface import LbdFilters
 
 
 class Graph(object):
     """In-memory Neo4j graph."""
+
+    Filters = LbdFilters
 
     def __init__(self, nodes, edges):
         """Initialize Graph.
@@ -81,8 +84,8 @@ class Graph(object):
         debug('initialized Graph: {}'.format(self.stats_str()))
 
     @timed
-    def neighbours(self, id_, metric=None, types=None, year=None,
-                   limit=None, offset=0, indices_only=False):
+    def neighbours(self, id_, metric, year=None, filters=None, limit=None,
+                   offset=0, indices_only=False):
         """Return neighbours of node.
 
         Args:
@@ -94,8 +97,12 @@ class Graph(object):
         year = self._validate_year(year)
         limit = self._validate_limit(limit)
         offset = self._validate_offset(offset)
+        # TODO: validate filters
 
-        filter_node = self._get_node_filter(types)
+        if filters:
+            filter_node = self._get_node_filter(filters.b_types)
+        else:
+            filter_node = self._get_node_filter(None)
 
         scores, n_indices = [], []
         neighbour_idx = self._neighbour_idx
@@ -123,8 +130,8 @@ class Graph(object):
         return results
 
     @timed
-    def open_discovery(self, a_id, metric=None, types=None, year=None,
-                       limit=None, offset=0):
+    def open_discovery(self, a_id, metric, agg_func, acc_func, year=None,
+                       filters=None, limit=None, offset=0):
         """Get 2nd-degree neighbours of node.
 
         Excludes the starting node and its 1st-degree neighbours.
@@ -135,24 +142,21 @@ class Graph(object):
         year = self._validate_year(year)
         limit = self._validate_limit(limit)
         offset = self._validate_offset(offset)
-
-        agg = self._get_agg_function('avg')    # TODO
-        acc = self._get_acc_function('max')    # TODO
-
-        filter_node = self._get_node_filter(types)
+        # TODO: validate filters, agg_func and acc_func
 
         node_count = self._node_count
 
         # Flag nodes to exclude for fast access in inner loop.
         exclude_idx = array('b', [0]) * node_count
         # TODO: include constraints other than year?
-        b_indices = self.neighbours(a_id, year=year, indices_only=True)
+        b_indices = self.neighbours(a_id, metric, year=year, indices_only=True)
         for b_idx in b_indices:
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
 
-        mark_type_filtered(exclude_idx, self._nodes_t.type, types,
-                           self._node_type_map)
+        if filters:
+            mark_type_filtered(exclude_idx, self._nodes_t.type, filters.c_types,
+                               self._node_type_map)
 
         # accumulate scores by node in array
         score = array('f', [0]) * node_count
@@ -161,9 +165,14 @@ class Graph(object):
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
 
+        if filters:
+            filter_b_node = self._get_node_filter(filters.b_types)
+        else:
+            filter_b_node = self._get_node_filter(None)
+
         open_discovery_core(a_idx, neighbour_idx, weights_from, score,
-                            is_c_idx, exclude_idx, filter_node,
-                            'avg', 'max')    # TODO types
+                            is_c_idx, exclude_idx, filter_b_node,
+                            agg_func, acc_func)
 
         argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count

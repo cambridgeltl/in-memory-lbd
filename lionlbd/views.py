@@ -30,6 +30,7 @@ def get_neighbours(id_):
     metric = get_metric()
     year = get_year()
     types = get_filter_type()
+    filters = graph.Filters(types, types)
     limit = get_limit()
     offset = get_offset()
     try:
@@ -37,7 +38,7 @@ def get_neighbours(id_):
             id_,
             metric=metric,
             year=year,
-            types=types,
+            filters=filters,
             limit=limit,
             offset=offset
         )
@@ -53,14 +54,17 @@ def get_2nd_neighbours(id_):
     metric = get_metric()
     year = get_year()
     types = get_filter_type()
+    filters = graph.Filters(types, types)
     limit = get_limit()
     offset = get_offset()
     try:
         result = graph.open_discovery(
             id_,
             metric=metric,
+            agg_func='avg',    # TODO
+            acc_func='max',    # TODO
             year=year,
-            types=types,
+            filters=filters,
             limit=limit,
             offset=offset
         )
