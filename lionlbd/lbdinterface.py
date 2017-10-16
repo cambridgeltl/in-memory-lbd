@@ -10,6 +10,9 @@ from six import string_types
 from abc import ABCMeta, abstractmethod
 
 
+DEFAULT_METRIC = 'count'    # TODO move to config
+
+
 class LbdFilters(object):
     """Filters applying to LBD queries."""
 
@@ -174,18 +177,6 @@ class LbdInterface(object):
         """
 
     @abstractmethod
-    def get_metric_range(self, metric):
-        """Return minimum and maximum values for given metric.
-
-        Args:
-            metric (str): Name of metric to return range for. Must be
-                one of the values returned by get_metrics().
-
-        Returns:
-            Pair of floats (min_value, max_value).
-        """
-
-    @abstractmethod
     def get_types(self):
         """Return node types used in the graph.
 
@@ -199,6 +190,18 @@ class LbdInterface(object):
 
         Returns:
             list of str: edge metric names.
+        """
+
+    @abstractmethod
+    def get_metric_range(self, metric):
+        """Return minimum and maximum values for given metric.
+
+        Args:
+            metric (str): Name of metric to return range for. Must be
+                one of the values returned by get_metrics().
+
+        Returns:
+            Pair of floats (min_value, max_value).
         """
 
     @abstractmethod
@@ -240,9 +243,56 @@ class LbdInterface(object):
         """
 
     @abstractmethod
-    def get_node(self):
+    def get_node(self, id_):
         """[TODO]"""
 
     @abstractmethod
     def meta_information(self):
         """[TODO]"""
+
+    def _validate_year(self, year):
+        """Verify that given year is valid, apply default if None."""
+        min_year, max_year = self.get_year_range()
+        if year is None:
+            return max_year
+        elif year < min_year or year > max_year:
+            raise ValueError('out of bounds year {}'.format(year))
+        return year
+
+    def _validate_metric(self, metric):
+        """Verify that given metric is valid, apply default if None."""
+        if metric is None:
+            return DEFAULT_METRIC
+        elif metric not in self.get_metrics():
+            raise ValueError('invalid metric {}'.format(metric))
+        return metric
+
+    def _validate_limit(self, limit):
+        """Verify that given limit is valid."""
+        if limit is None:
+            return limit    # None is a valid value
+        elif limit <= 0:
+            raise ValueError('out of bounds limit {}'.format(limit))
+        return limit
+
+    def _validate_offset(self, offset):
+        """Verify that given offset is valid, apply default if None"""
+        if offset is None:
+            return 0
+        elif offset < 0:
+            raise ValueError('out of bounds offset {}'.format(offset))
+        return offset
+
+    def _validate_filters(self, filters):
+        """Verify that given LbdFilters are valid."""
+        if filters is None:
+            return filters    # TODO: return filters with defaults?
+        types = set(self.get_types())
+        for ftypes in (filters.b_types, filters.c_types):
+            if ftypes is None:
+                continue
+            for type_ in ftypes:
+                if type_ not in types:
+                    raise ValueError('invalid type {}'.format(type_))
+        # TODO: validate metric ranges?
+        return filters
