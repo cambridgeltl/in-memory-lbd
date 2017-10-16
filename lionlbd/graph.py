@@ -56,6 +56,7 @@ class Graph(LbdInterface):
         nodes, edges = None, None    # release
 
         self._node_type_map = self._create_binary_type_map(self._nodes_t)
+        self._node_types = list(sorted(self._node_type_map.keys()))
         self._nodes_t = self._map_types(self._nodes_t, self._node_type_map)
 
         self._edges_t = self._ids_to_indices(
@@ -95,9 +96,9 @@ class Graph(LbdInterface):
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
+        filters = self._validate_filters(filters)
         limit = self._validate_limit(limit)
         offset = self._validate_offset(offset)
-        # TODO: validate filters
 
         if filters:
             filter_node = self._get_node_filter(filters.b_types)
@@ -145,9 +146,10 @@ class Graph(LbdInterface):
 
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
+        filters = self._validate_filters(filters)
         limit = self._validate_limit(limit)
         offset = self._validate_offset(offset)
-        # TODO: validate filters, agg_func and acc_func
+        # TODO: validate agg_func and acc_func
 
         node_count = self._node_count
 
@@ -205,7 +207,7 @@ class Graph(LbdInterface):
         return self._min_year, self._max_year
 
     def get_types(self):
-        raise NotImplementedError()
+        return self._node_types
 
     def get_metrics(self):
         """Return edge weight metrics used in the graph.
