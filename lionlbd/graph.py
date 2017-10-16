@@ -19,10 +19,10 @@ from numpy import argsort
 from lionlbd.config import METRIC_PREFIX, METRIC_SUFFIX
 from lionlbd.common import timed
 from lionlbd.neo4jcsv import transpose, array_type_code
-from lionlbd.lbdinterface import LbdFilters
+from lionlbd.lbdinterface import LbdInterface, LbdFilters
 
 
-class Graph(object):
+class Graph(LbdInterface):
     """In-memory Neo4j graph."""
 
     Filters = LbdFilters
@@ -130,6 +130,11 @@ class Graph(object):
         return results
 
     @timed
+    def closed_discovery(self, a_id, c_id, metric, agg_func, year=None,
+                         filters=None, limit=None, offset=0):
+        raise NotImplementedError()
+
+    @timed
     def open_discovery(self, a_id, metric, agg_func, acc_func, year=None,
                        filters=None, limit=None, offset=0):
         """Get 2nd-degree neighbours of node.
@@ -190,6 +195,18 @@ class Graph(object):
             result_idx += 1
         return results
 
+    def subgraph(self, nodes, metric, year=None, filters=None):
+        raise NotImplementedError()
+
+    def get_node(self, id_):
+        raise NotImplementedError()
+
+    def get_year_range(self):
+        return self._min_year, self._max_year
+
+    def get_types(self):
+        raise NotImplementedError()
+
     def get_metrics(self):
         """Return edge weight metrics used in the graph.
 
@@ -197,6 +214,18 @@ class Graph(object):
             list of str: edge metric names.
         """
         return [name for index, name, type_ in self._metrics]
+
+    def get_metric_range(self, metric):
+        raise NotImplementedError()
+
+    def get_aggregation_functions(self):
+        raise NotImplementedError()
+
+    def get_accumulation_functions(self):
+        raise NotImplementedError()
+
+    def meta_information(self):
+        raise NotImplementedError()
 
     def _get_node_idx(self, id_):
         try:
@@ -211,39 +240,6 @@ class Graph(object):
             if name == metric:
                 return type_
         raise ValueError(metric)
-
-    def _validate_year(self, year):
-        """Verify that given year is valid, apply default if None."""
-        if year is None:
-            return self._max_year
-        elif year < self._min_year or year > self._max_year:
-            raise ValueError('out of bounds year {}'.format(year))
-        return year
-
-    def _validate_limit(self, limit):
-        """Verify that given limit is valid."""
-        if limit is None:
-            return limit    # None is valid
-        elif limit <= 0:
-            raise ValueError('out of bounds limit {}'.format(limit))
-        return limit
-
-    def _validate_offset(self, offset):
-        """Verify that given offset is valid, apply default if None"""
-        if offset is None:
-            return 0
-        elif offset < 0:
-            raise ValueError('out of bounds offset {}'.format(offset))
-        return offset
-
-    def _validate_metric(self, metric):
-        """Verify that given metric is valid, apply default if None."""
-        if metric is None:
-            return 'count'    # TODO configurable default
-        elif metric in self.get_metrics():
-            return metric
-        else:
-            raise ValueError('invalid metric {}'.format(metric))
 
     def _get_node_filter(self, types=None):
         """Return function determining whether to filter out a node."""
