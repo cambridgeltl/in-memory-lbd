@@ -162,9 +162,8 @@ class Graph(LbdInterface):
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
 
-        if filters:
-            mark_type_filtered(exclude_idx, self._nodes_t.type, filters.c_types,
-                               self._node_type_map)
+        mark_type_filtered(exclude_idx, self._nodes_t.type, filters.c_types,
+                           self._node_type_map)
 
         # accumulate scores by node in array
         score = array('f', [0]) * node_count
@@ -173,10 +172,7 @@ class Graph(LbdInterface):
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
 
-        if filters:
-            filter_b_node = self._get_node_filter(filters.b_types)
-        else:
-            filter_b_node = self._get_node_filter(None)
+        filter_b_node = self._get_node_filter(filters.b_types)
 
         open_discovery_core(a_idx, neighbour_idx, weights_from, score,
                             is_c_idx, exclude_idx, filter_b_node,
