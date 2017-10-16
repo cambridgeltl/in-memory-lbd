@@ -62,6 +62,7 @@ class Graph(LbdInterface):
         self._edges_t = self._ids_to_indices(
             self._edges_t, self._node_idx_by_id)
 
+        # TODO lift this block into a separate function
         self._weights_by_metric_and_year = {}
         for m_idx, m_name, m_type in self._metrics:
             self._weights_by_metric_and_year[m_name] = self._group_by_year(
@@ -69,6 +70,9 @@ class Graph(LbdInterface):
                 self._min_year, self._max_year)
             self._edges_t = self._remove_metric(
                 m_name, self._edges_t, self._metrics)
+
+        self._metric_ranges = self._find_metric_ranges(
+            self._weights_by_metric_and_year)
 
         self._neighbour_idx = self._create_neighbour_sequences(
             self._node_count, self._edges_t)
@@ -215,7 +219,8 @@ class Graph(LbdInterface):
         return [name for index, name, type_ in self._metrics]
 
     def get_metric_range(self, metric):
-        raise NotImplementedError()
+        self._validate_metric(metric)
+        return self._metric_ranges[metric]
 
     def get_aggregation_functions(self):
         return ['avg']    # TODO
@@ -382,6 +387,20 @@ class Graph(LbdInterface):
         edges_d['end'] = array('i', (node_idx_by_id[i] for i in edges_t.end))
         class_ = type(edges_t)
         return class_(**edges_d)
+
+    @staticmethod
+    @timed
+    def _find_metric_ranges(weights_by_metric_and_year):
+        ranges = {}
+        for metric, weights_by_year in weights_by_metric_and_year.iteritems():
+            m_min, m_max = None, None
+            for weights in weights_by_year.values():
+                y_min, y_max = min(weights), max(weights)
+                m_min = y_min if m_min is None or y_min < m_min else m_min
+                m_max = y_max if m_max is None or y_max > m_max else m_max
+            ranges[metric] = (m_min, m_max)
+            debug('range for {}: [{}, {}]'.format(metric, m_min, m_max))
+        return ranges
 
     @staticmethod
     @timed
