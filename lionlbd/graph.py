@@ -104,10 +104,7 @@ class Graph(LbdInterface):
         limit = self._validate_limit(limit)
         offset = self._validate_offset(offset)
 
-        if filters:
-            filter_node = self._get_node_filter(filters.b_types)
-        else:
-            filter_node = self._get_node_filter(None)
+        filter_node = self._get_node_filter(filters.b_types)
 
         scores, n_indices = [], []
         neighbour_idx = self._neighbour_idx
