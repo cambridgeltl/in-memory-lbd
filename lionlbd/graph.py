@@ -304,14 +304,14 @@ class Graph(LbdInterface):
             return {
                 'B': node_id[n_idx],
                 'B_type': inv_type_map[node_type[n_idx]],
-                'comp': score,
+                'score': score,
             }
 
         def lion_2nd(n_idx, score, *args):
             return {
                 'C': node_id[n_idx],
                 'C_type': inv_type_map[node_type[n_idx]],
-                'comp': score,
+                'score': score,
             }
 
         if type_ == 'id':
