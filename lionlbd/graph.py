@@ -81,6 +81,9 @@ class Graph(LbdInterface):
         self._edges_from = self._create_edge_sequences(
             self._node_count, self._edges_t)
 
+        self._edge_from_to = self._create_edge_from_to(
+            self._node_count, self._edges_t)
+
         self._weights_from_cache = {}    # lazy init
         # for year in range(self._min_year, self._max_year+1):
         #     self._get_weights_from('count', year)    # precache (TODO)
@@ -195,8 +198,43 @@ class Graph(LbdInterface):
             result_idx += 1
         return results
 
-    def subgraph(self, nodes, metric, year=None, filters=None):
-        raise NotImplementedError()
+    def subgraph(self, nodes, metrics, year=None, filters=None, exclude=None):
+        if not isinstance(nodes, list):
+            nodes = list(nodes)
+        node_indices = [self._get_node_idx(i) for i in nodes]
+        metrics = self._validate_metrics(metrics)
+        year = self._validate_year(year)
+        filters = self._validate_filters(filters)
+        exclude = [] if exclude is None else exclude
+        exclude_indices = set([self._get_node_idx(i) for i in exclude])
+
+        # get edge weights for requested metrics and given year
+        metric_weights = [(m, self._weights_by_metric_and_year[m][year])
+                          for m in metrics]
+
+        # Note: the following assumes that edges are symmetric.
+        # TODO filters
+        edges = []
+        edge_year = self._edges_t.year
+        node_id_idx = zip(nodes, node_indices)
+        for i, (n1_id, n1_idx) in enumerate(node_id_idx):
+            if n1_idx in exclude_indices:
+                continue
+            for j in xrange(i+1, len(node_indices)):
+                n2_id, n2_idx = node_id_idx[j]
+                edge_idx = self._edge_from_to[n1_idx].get(n2_idx)
+                if edge_idx is None:
+                    continue
+                edge = {
+                    'start': n1_id,
+                    'end': n2_id,
+                    'year': edge_year[edge_idx],
+                }
+                for metric, weights in metric_weights:
+                    edge[metric] = weights[edge_idx]
+                edges.append(edge)
+
+        return edges
 
     def get_node(self, id_):
         raise NotImplementedError()
@@ -434,6 +472,7 @@ class Graph(LbdInterface):
         return class_(*edges_l)
 
     @staticmethod
+    @timed
     def _create_neighbour_sequences(node_count, edges_t):
         """Create index-based mapping from node to neighbouring nodes.
 
@@ -456,6 +495,21 @@ class Graph(LbdInterface):
         for idx, start in enumerate(edges_t.start):
             edges_from[start].append(idx)
         return edges_from
+
+    @staticmethod
+    @timed
+    def _create_edge_from_to(node_count, edges_t):
+        """Create node index-based mapping m where m[f][t] is edge index.
+
+        Note:
+            Expects edges_t to be result of _ids_to_indices(transpose(edges)).
+        """
+        edge_from_to = [{} for _ in xrange(node_count)]
+        for i, (start, end) in enumerate(izip(edges_t.start, edges_t.end)):
+            if end in edge_from_to[start]:
+                raise ValueError('duplicate edge {} - {}'.format(start, end))
+            edge_from_to[start][end] = i
+        return edge_from_to
 
     @staticmethod
     def _to_directed_graph(nodes, edges):
