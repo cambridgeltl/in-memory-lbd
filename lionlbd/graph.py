@@ -50,6 +50,7 @@ class Graph(LbdInterface):
             self._min_year, self._max_year))
 
         self._metrics = self._get_edge_metrics(edges[0])
+        info('metrics: {}'.format(self.get_metric_information()))
 
         self._nodes_t = transpose(nodes)
         self._edges_t = transpose(edges)
@@ -235,6 +236,9 @@ class Graph(LbdInterface):
                 edges.append(edge)
 
         return edges
+
+    def discoverable_edges(self, after, until=None):
+        raise NotImplementedError()
 
     def get_node(self, id_):
         raise NotImplementedError()
