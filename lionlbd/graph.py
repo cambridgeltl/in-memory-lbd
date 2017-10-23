@@ -199,7 +199,8 @@ class Graph(LbdInterface):
             result_idx += 1
         return results
 
-    def subgraph(self, nodes, metrics, year=None, filters=None, exclude=None):
+    def subgraph_edges(self, nodes, metrics, year=None, filters=None,
+                       exclude=None, history=False):
         if not isinstance(nodes, list):
             nodes = list(nodes)
         node_indices = [self._get_node_idx(i) for i in nodes]
@@ -240,7 +241,7 @@ class Graph(LbdInterface):
     def discoverable_edges(self, after, until=None):
         raise NotImplementedError()
 
-    def get_node(self, id_):
+    def get_nodes(self, ids):
         raise NotImplementedError()
 
     def get_year_range(self):

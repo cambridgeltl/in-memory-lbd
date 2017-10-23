@@ -25,6 +25,41 @@ def index():
 #                                       mimetype='application/json')
 
 
+@app.route('/extend_graph/<id_>')
+def extend_graph(id_):
+    metric = get_metric()
+    year = get_year()
+    types = get_filter_type()
+    filters = graph.Filters(types)
+    limit = get_limit()
+    offset = get_offset()
+
+    # TODO existing nodes
+
+    try:
+        neighbours = graph.neighbours(
+            id_,
+            metric=metric,
+            year=year,
+            filters=filters,
+            limit=limit,
+            offset=offset
+        )
+    except KeyError, e:
+        warn(e)
+        abort(404)
+
+    node_ids = [id_] + [n['B'] for n in neighbours]
+    edges = graph.subgraph(
+        node_ids,
+        ['count'],
+        year=year,
+        filters=filters
+    )
+
+    return jsonify([neighbours, edges])
+
+    
 @app.route('/neighbours/<id_>')
 def get_neighbours(id_):
     metric = get_metric()
