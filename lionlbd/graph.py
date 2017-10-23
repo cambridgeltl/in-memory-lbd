@@ -127,6 +127,7 @@ class Graph(LbdInterface):
 
         results = []
         build_result = self._get_result_builder(degree=1, type_='lion')
+        # TODO avoid empty loops when offset > 0
         for i, idx in enumerate(argsorted, start=1):
             if i > end_idx:
                 break
@@ -137,8 +138,61 @@ class Graph(LbdInterface):
 
     @timed
     def closed_discovery(self, a_id, c_id, metric, agg_func, year=None,
-                         filters=None, limit=None, offset=0):
-        raise NotImplementedError()
+                         filters=None, limit=None, offset=0, exists_only=False):
+        a_idx, c_idx = self._get_node_idx(a_id), self._get_node_idx(c_id)
+
+        metric = self._validate_metric(metric)
+        agg = self._get_agg_function(agg_func)
+        year = self._validate_year(year)
+        filters = self._validate_filters(filters)
+        limit = self._validate_limit(limit)
+        offset = self._validate_offset(offset)
+
+        filter_node = self._get_node_filter(filters.b_types)
+
+        weights_from = self._get_weights_from(metric, year)
+
+        # Note: the following assumes that edges are symmetric.
+        # Swap "A" and "C" if the former has more neighbours than the
+        # latter (fewer iterations).
+        if len(weights_from[a_idx]) > len(weights_from[c_idx]):
+            a_idx, c_idx = c_idx, a_idx
+
+        scores, b_indices = [], []
+        neighbour_idx = self._neighbour_idx
+        edge_from_to = self._edge_from_to
+        edge_weight = self._weights_by_metric_and_year[metric][year]
+        for b_idx, e1_weight in izip(neighbour_idx[a_idx], weights_from[a_idx]):
+            if filter_node(b_idx):
+                continue
+            # TODO e1 weight filter
+            e2_idx = edge_from_to[b_idx].get(c_idx)
+            if e2_idx is None:
+                continue    # no B-C edge
+            if e2_idx >= len(edge_weight):
+                continue    # implicit year filter
+            if exists_only:
+                return True
+            e2_weight = edge_weight[e2_idx]
+            # TODO e2 weight filter
+            scores.append(agg(e1_weight, e2_weight))
+            b_indices.append(b_idx)
+
+        if exists_only:
+            return False
+
+        argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
+        end_idx = offset+limit if limit is not None else len(scores)
+
+        results = []
+        node_id = self._nodes_t.id
+        # TODO avoid empty loops when offset > 0
+        for i, idx in enumerate(argsorted, start=1):
+            if i > end_idx:
+                break
+            if i > offset:
+                results.append((node_id[b_indices[idx]], scores[idx]))
+        return results
 
     @timed
     def open_discovery(self, a_id, metric, agg_func, acc_func, year=None,
