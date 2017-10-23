@@ -108,3 +108,27 @@ def get_2nd_neighbours(id_):
         abort(404)
     debug('get_2nd_neighbours: {} for {}'.format(len(result), id_))
     return jsonify(result)
+
+
+@app.route('/closed_discovery/<a_id>/to/<c_id>')
+def closed_discovery(a_id, c_id):
+    metric = get_metric()
+    year = get_year()
+    types = get_filter_type()
+    filters = graph.Filters(types, types)
+    limit = get_limit()
+    offset = get_offset()
+    try:
+        result = graph.closed_discovery(
+            a_id, c_id,
+            metric=metric,
+            agg_func='avg',    # TODO
+            year=year,
+            filters=filters,
+            limit=limit,
+            offset=offset
+        )
+    except KeyError, e:
+        warn(e)
+        abort(404)
+    return jsonify(result)
