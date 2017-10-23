@@ -241,7 +241,7 @@ class Graph(LbdInterface):
     def discoverable_edges(self, after, until=None):
         raise NotImplementedError()
 
-    def get_nodes(self, ids):
+    def get_nodes(self, ids, year=None, history=False):
         raise NotImplementedError()
 
     def get_year_range(self):
