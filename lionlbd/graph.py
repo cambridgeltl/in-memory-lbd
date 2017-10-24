@@ -293,7 +293,43 @@ class Graph(LbdInterface):
         return edges
 
     def discoverable_edges(self, after, until=None):
-        raise NotImplementedError()
+        # validate after and until parameters
+        min_year, max_year = self.get_year_range()
+        if after <= min_year:
+            raise ValueError('after ({}) <= max ({})'.format(after, min_year))
+        if after >= max_year:
+            raise ValueError('after ({}) >= max ({})'.format(after, max_year))
+        if until is not None and until <= after:
+            raise ValueError('until ({}) <= after ({})'.format(until, after))
+        if until is not None and until > max_year:
+            raise ValueError('until ({}) >= max ({})'.format(until, max_year))
+        if until is None:
+            until = max_year
+
+        # TODO make use of edge sort by year (bisect)
+        node_id = self._nodes_t.id
+        edge_start, edge_end = self._edges_t.start, self._edges_t.end
+        discoverable = []
+        for edge_idx, edge_year in enumerate(self._edges_t.year):
+            if edge_year <= after:
+                continue
+            elif until is not None and edge_year > until:
+                continue
+            start_idx, end_idx = edge_start[edge_idx], edge_end[edge_idx]
+            start_id, end_id = node_id[start_idx], node_id[end_idx]
+
+            path_exists = self.closed_discovery(
+                start_id, end_id, metric=None, agg_func=None, year=after,
+                exists_only=True)
+            if not path_exists:
+                continue
+
+            discoverable.append({
+                'start': start_id,
+                'end': end_id,
+                'year': edge_year
+            })
+        return discoverable
 
     def get_nodes(self, ids, year=None, history=False):
         raise NotImplementedError()
@@ -625,6 +661,8 @@ class Graph(LbdInterface):
             return lambda a, b: a + b
         elif name == 'avg':
             return lambda a, b: (a + b) / 2.0
+        elif name is None:
+            return lambda a, b: None    # no aggregation / result unused
         else:
             raise NotImplementedError(name)
 
