@@ -119,7 +119,7 @@ class Graph(LbdInterface):
             scores.append(e_weight)
             n_indices.append(n_idx)
 
-        argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
+        argsorted = argsort(scores)[::-1]    # TODO: argpartition if limit?
         end_idx = offset+limit if limit is not None else len(scores)
 
         if indices_only:
@@ -181,7 +181,7 @@ class Graph(LbdInterface):
         if exists_only:
             return False
 
-        argsorted = reversed(argsort(scores))    # TODO: argpartition if limit?
+        argsorted = argsort(scores)[::-1]    # TODO: argpartition if limit?
         end_idx = offset+limit if limit is not None else len(scores)
 
         results = []
@@ -237,7 +237,7 @@ class Graph(LbdInterface):
                             is_c_idx, exclude_idx, filter_b_node,
                             agg_func, acc_func)
 
-        argsorted = reversed(argsort(score))    # TODO: argpartition if limit?
+        argsorted = argsort(score)[::-1]    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count
         end_idx = offset+limit if limit is not None else len(scores)
 
