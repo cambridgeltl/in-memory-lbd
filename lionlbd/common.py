@@ -12,7 +12,7 @@ from functools import wraps
 from collections import defaultdict
 from logging import debug, info
 
-from lionlbd.config import YEAR_PARAMETER, METRIC_PARAMETER
+from lionlbd.config import YEAR_PARAMETER, UNTIL_PARAMETER, METRIC_PARAMETER
 from lionlbd.config import FILTER_TYPE_PARAMETER
 from lionlbd.config import LIMIT_PARAMETER, OFFSET_PARAMETER
 
@@ -42,6 +42,10 @@ def get_filter_type():
 
 def get_year():
     return _get_int_argument(YEAR_PARAMETER, default=None)
+
+
+def get_until():
+    return _get_int_argument(UNTIL_PARAMETER, default=None)
 
 
 def get_limit():

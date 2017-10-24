@@ -27,6 +27,9 @@ FILTER_TYPE_PARAMETER = 'type'
 # Parameter determining (max) year
 YEAR_PARAMETER = 'year'
 
+# Parameter determining "until" year for discoverable edges
+UNTIL_PARAMETER = 'until'
+
 # Parameter determining edge scoring metric
 METRIC_PARAMETER = 'edge_metric'
 

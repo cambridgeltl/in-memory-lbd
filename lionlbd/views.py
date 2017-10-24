@@ -9,7 +9,7 @@ from logging import debug, info, warn, error
 from lionlbd import app
 from lionlbd import graph
 from lionlbd.common import get_metric, get_year, get_filter_type
-from lionlbd.common import get_limit, get_offset
+from lionlbd.common import get_limit, get_offset, get_until
 
 
 @app.route('/')
@@ -131,4 +131,15 @@ def closed_discovery(a_id, c_id):
     except KeyError, e:
         warn(e)
         abort(404)
+    return jsonify(result)
+
+
+@app.route('/discoverable_edges/<after>')
+def get_discoverable_edges(after):
+    try:
+        after = int(after)
+    except ValueError:
+        abort(400)
+    until = get_until()
+    result = graph.discoverable_edges(after, until)
     return jsonify(result)
