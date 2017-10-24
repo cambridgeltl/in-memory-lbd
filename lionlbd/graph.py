@@ -121,20 +121,19 @@ class Graph(LbdInterface):
 
         argsorted = argsort(scores)[::-1]    # TODO: argpartition if limit?
         end_idx = offset+limit if limit is not None else len(scores)
+        end_idx = min(end_idx, len(scores))
 
         if indices_only:
-            return n_indices[offset:end_idx]    # TODO: return without sort?
-
-        results = []
-        build_result = self._get_result_builder(degree=1, type_='lion')
-        # TODO avoid empty loops when offset > 0
-        for i, idx in enumerate(argsorted, start=1):
-            if i > end_idx:
-                break
-            if i > offset:
-                results.append(build_result(n_indices[idx], scores[idx]))
-
-        return results
+            if limit is not None or offset > 0:
+                raise NotImplementedError
+            return n_indices
+        else:
+            node_ids, node_scores = [], []
+            node_id = self._nodes_t.id
+            for idx in argsorted[offset:end_idx]:
+                node_ids.append(node_id[idx])
+                node_scores.append(scores[idx])
+            return node_ids, node_scores
 
     @timed
     def closed_discovery(self, a_id, c_id, metric, agg_func, year=None,
