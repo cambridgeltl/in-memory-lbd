@@ -94,7 +94,7 @@ class Graph(LbdInterface):
 
     @timed
     def neighbours(self, id_, metric, year=None, filters=None, limit=None,
-                   offset=0, indices_only=False):
+                   offset=0, exclude_neighbours_of=None, indices_only=False):
         """Return neighbours of node.
 
         Args:
