@@ -131,7 +131,7 @@ class Graph(LbdInterface):
             node_ids, node_scores = [], []
             node_id = self._nodes_t.id
             for idx in argsorted[offset:end_idx]:
-                node_ids.append(node_id[idx])
+                node_ids.append(node_id[n_indices[idx]])
                 node_scores.append(scores[idx])
             return node_ids, node_scores
 
@@ -155,6 +155,7 @@ class Graph(LbdInterface):
         # Swap "A" and "C" if the former has more neighbours than the
         # latter (fewer iterations).
         if len(weights_from[a_idx]) > len(weights_from[c_idx]):
+            debug('closed_discovery: swap to A: {}, C: {}'.format(c_id, a_id))
             a_idx, c_idx = c_idx, a_idx
 
         scores, b_indices = [], []
@@ -187,7 +188,7 @@ class Graph(LbdInterface):
         node_ids, node_scores = [], []
         node_id = self._nodes_t.id
         for idx in argsorted[offset:end_idx]:
-            node_ids.append(node_id[idx])
+            node_ids.append(node_id[b_indices[idx]])
             node_scores.append(scores[idx])
         return node_ids, node_scores
 
