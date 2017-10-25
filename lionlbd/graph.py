@@ -676,7 +676,9 @@ class Graph(LbdInterface):
 
     @staticmethod
     def _get_agg_function(name):
-        if name == 'sum':
+        if name == 'min':
+            return lambda a, b: min(a, b)    # TODO bad idea, remove
+        elif name == 'sum':
             return lambda a, b: a + b
         elif name == 'avg':
             return lambda a, b: (a + b) / 2.0
