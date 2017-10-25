@@ -331,7 +331,29 @@ class Graph(LbdInterface):
         return discoverable
 
     def get_nodes(self, ids, year=None, history=False):
-        raise NotImplementedError()
+        if year is not None:
+            raise NotImplementedError
+        if history:
+            raise NotImplementedError
+        indices = [self._get_node_idx(i) for i in ids]
+        nodes = []
+        node_id = self._nodes_t.id
+        node_type = self._nodes_t.type
+        node_text = self._nodes_t.text
+        node_count = self._nodes_t.count
+        node_doc_count = self._nodes_t.document_count
+        inv_type_map = { v: k for k, v in self._node_type_map.items() }
+        for i in indices:
+            nodes.append({
+                'id': node_id[i],
+                'type': inv_type_map[node_type[i]],
+                'text': node_text[i],
+                'year': 1900,    # TODO
+                'count': node_count[i],
+                'doc_count': node_doc_count[i],
+                'edge_count': 100,    # TODO
+            })
+        return nodes
 
     def get_year_range(self):
         return self._min_year, self._max_year
