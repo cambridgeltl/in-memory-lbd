@@ -182,16 +182,14 @@ class Graph(LbdInterface):
 
         argsorted = argsort(scores)[::-1]    # TODO: argpartition if limit?
         end_idx = offset+limit if limit is not None else len(scores)
+        end_idx = min(end_idx, len(scores))
 
-        results = []
+        node_ids, node_scores = [], []
         node_id = self._nodes_t.id
-        # TODO avoid empty loops when offset > 0
-        for i, idx in enumerate(argsorted, start=1):
-            if i > end_idx:
-                break
-            if i > offset:
-                results.append((node_id[b_indices[idx]], scores[idx]))
-        return results
+        for idx in argsorted[offset:end_idx]:
+            node_ids.append(node_id[idx])
+            node_scores.append(scores[idx])
+        return node_ids, node_scores
 
     @timed
     def open_discovery(self, a_id, metric, agg_func, acc_func, year=None,
