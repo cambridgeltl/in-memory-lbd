@@ -36,11 +36,11 @@ def invoke_method(method):
         error('invoke_method(): no method "{}"'.format(method))
         abort(404)
 
-    # get caller parameters
-    params = request.args.get('params')
+    # get caller parameters (if any)
+    params = request.args.get('params', '{}')
     try:
         params = json.loads(params)
-    except ValueError:
+    except:
         exception('invoke_method(): failed to loads params "{}"'.format(params))
         abort(400)
     debug('invoke_method() params: {}'.format(params))
