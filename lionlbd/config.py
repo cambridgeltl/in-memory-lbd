@@ -4,7 +4,7 @@ import os
 DEBUG = True
 
 # Port to listen on
-PORT = 8080
+PORT = 8081
 
 # http://jinja.pocoo.org/docs/templates/#whitespace-control
 TRIM_BLOCKS = True
