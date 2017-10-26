@@ -29,14 +29,7 @@ def load_nodes(fn):
         _rename_column(colnames, old, new)
 
     # nodes have redundant "id" and "OID" fields; remove the latter
-    try:
-        oid_idx = colnames.index('OID')
-    except ValueError:
-        raise ValueError('expected column OID, got {}'.format(old, colnames))
-    for d in data:
-        del d[oid_idx]
-    del colnames[oid_idx]
-    del coltypes[oid_idx]
+    data, colnames, coltypes = _delete_column('OID', data, colnames, coltypes)
 
     class_ = namedtuple('Node', ' '.join(colnames))
     class_._field_types = coltypes
@@ -61,12 +54,41 @@ def load_edges(fn):
     return map(class_._make, data)
 
 
+@timed
+def load_meta(fn):
+    """Load metadata from Neo4j CSV, return namedtuples.
+
+    Stores Neo4j types in namedtuple as _field_types list.
+    """
+    colnames, coltypes, data = load_csv(fn)
+
+    # ID and LABEL are unnecessary in metadata
+    data, colnames, coltypes = _delete_column('ID', data, colnames, coltypes)
+    data, colnames, coltypes = _delete_column('LABEL', data, colnames, coltypes)
+
+    class_ = namedtuple('Meta', ' '.join(colnames))
+    class_._field_types = coltypes
+    return map(class_._make, data)
+
+
 def _rename_column(colnames, old, new):
     try:
         idx = colnames.index(old)
     except ValueError:
         raise ValueError('expected column {}, got {}'.format(old, colnames))
     colnames[idx] = new
+
+
+def _delete_column(name, data, colnames, coltypes):
+    try:
+        idx = colnames.index(name)
+    except ValueError:
+        raise ValueError('expected column {}, got {}'.format(name, colnames))
+    for d in data:
+        del d[idx]
+    del colnames[idx]
+    del coltypes[idx]
+    return data, colnames, coltypes
 
 
 def load_csv(fn):

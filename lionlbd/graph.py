@@ -27,7 +27,7 @@ class Graph(LbdInterface):
 
     Filters = LbdFilters
 
-    def __init__(self, nodes, edges):
+    def __init__(self, nodes, edges, metadata):
         """Initialize Graph.
 
         Note: sorts given lists of nodes and edges.
@@ -36,6 +36,11 @@ class Graph(LbdInterface):
             raise ValueError('no nodes')
         if not edges:
             raise ValueError('no edges')
+        if not metadata:
+            raise ValueError('no metadata')
+        if len(metadata) != 1:
+            raise ValueError('expected one meta item, got {}'.format(len(meta)))
+        self._metadata = metadata[0]
 
         nodes, edges = self._to_directed_graph(nodes, edges)
         self._node_count = len(nodes)
@@ -379,7 +384,12 @@ class Graph(LbdInterface):
         return ['max']    # TODO
 
     def meta_information(self):
-        raise NotImplementedError()
+        # convert into JSON-serializable form
+        metadata = {
+            k: v if not isinstance(v, array) else list(v)
+            for k, v in self._metadata._asdict().iteritems()
+        }
+        return metadata
 
     def _get_node_idx(self, id_):
         try:
