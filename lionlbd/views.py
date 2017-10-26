@@ -62,7 +62,7 @@ def invoke_method(method):
             name, params))
         abort(400)
 
-    debug('invoke_method(): {} returned {}'.format(name, str(result)[:40]))
+    debug('invoke_method(): {} returned {}'.format(name, str(result)))
     return jsonify(result)
 
 
