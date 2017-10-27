@@ -29,7 +29,7 @@ args = parse_args()
 
 logging.debug('node file {}'.format(args.nodes))
 logging.debug('edge file {}'.format(args.edges))
-logging.debug('meta file {}'.format(args.edges))
+logging.debug('meta file {}'.format(args.meta))
 
 @timed
 def load_graph(node_file, edge_file, meta_file):
