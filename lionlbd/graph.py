@@ -420,44 +420,6 @@ class Graph(LbdInterface):
             node_types = self._nodes_t.type
             return lambda n_idx: not (node_types[n_idx] & type_mask)
 
-    def _get_result_builder(self, degree=1, type_='id'):
-        """Return function for building result objects."""
-        node_id = self._nodes_t.id
-        node_type = self._nodes_t.type
-        inv_type_map = { v: k for k, v in self._node_type_map.items() }
-
-        def id_only(n_idx, *args):
-            return node_id[n_idx]
-
-        def lion_1st(n_idx, score, *args):
-            return {
-                'B': node_id[n_idx],
-                'B_type': inv_type_map[node_type[n_idx]],
-                'score': score,
-            }
-
-        def lion_2nd(n_idx, score, *args):
-            return {
-                'C': node_id[n_idx],
-                'C_type': inv_type_map[node_type[n_idx]],
-                'score': score,
-            }
-
-        if type_ == 'id':
-            return id_only
-        elif degree == 1:    # 1st degree (immediate) neighbours
-            if type_ == 'lion':
-                return lion_1st
-            else:
-                raise NotImplementedError('{}/{}'.format(degree, type_))
-        elif degree == 2:
-            if type_ == 'lion':
-                return lion_2nd
-            else:
-                raise NotImplementedError('{}/{}'.format(degree, type_))
-        else:
-            raise NotImplementedError('{}/{}'.format(degree, type_))
-
     @timed
     def _get_weights_from(self, metric, year):
         if metric not in self._weights_from_cache:
