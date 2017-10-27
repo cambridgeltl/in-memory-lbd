@@ -107,12 +107,17 @@ class Graph(LbdInterface):
             metric, year, filters, limit, offset)
 
         filter_node = self._get_node_filter(filters.b_types)
+        if exclude_neighbours_of is None:
+            excluded_indices = set()    # exclude nothing
+        else:
+            x_idx = self._get_node_idx(id_)
+            excluded_indices = set(self._neighbour_indices(x_idx, metric, year))
 
         scores, n_indices = [], []
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
         for n_idx, e_weight in izip(neighbour_idx[idx], weights_from[idx]):
-            if filter_node(n_idx):
+            if filter_node(n_idx) or n_idx in excluded_indices:
                 continue
             scores.append(e_weight)
             n_indices.append(n_idx)
@@ -135,6 +140,7 @@ class Graph(LbdInterface):
         # year constraint. The actual metric values are not required.
         weights_from = self._get_weights_from(metric, year)
         neighbour_count = len(weights_from[idx])
+        # TODO: consider islice to avoid creating new list?
         return self._neighbour_idx[idx][:neighbour_count]
 
     @timed
