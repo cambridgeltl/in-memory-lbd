@@ -277,13 +277,13 @@ class Graph(LbdInterface):
         edge_year = self._edges_t.year
         node_id_idx = zip(nodes, node_indices)
         for i, (n1_id, n1_idx) in enumerate(node_id_idx):
-            if n1_idx in exclude_indices:
-                continue
             for j in xrange(i+1, len(node_indices)):
                 n2_id, n2_idx = node_id_idx[j]
+                if n1_idx in exclude_indices and n2_idx in exclude_indices:
+                    continue    # skip (possible) edge between "exclude" nodes
                 edge_idx = self._edge_from_to[n1_idx].get(n2_idx)
                 if edge_idx is None:
-                    continue
+                    continue    # no edge there
                 edge = {
                     'start': n1_id,
                     'end': n2_id,
