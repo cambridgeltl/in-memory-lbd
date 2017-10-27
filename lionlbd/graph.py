@@ -288,6 +288,8 @@ class Graph(LbdInterface):
                 edge_idx = self._edge_from_to[n1_idx].get(n2_idx)
                 if edge_idx is None:
                     continue    # no edge there
+                if edge_year[edge_idx] > year:
+                    continue    # edge only appears after given year
                 edge = {
                     'start': n1_id,
                     'end': n2_id,
