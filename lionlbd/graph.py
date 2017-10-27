@@ -462,7 +462,8 @@ class Graph(LbdInterface):
                 self._node_count, self._edges_t.start, edge_weight, idx_after)
         return self._weights_from_cache[metric][year]
 
-    def _validate_common_args(metric, year, filters, limit=None, offset=0):
+    def _validate_common_args(self, metric, year, filters, limit=None,
+                              offset=0):
         """Validate common arguments, applying defaults when applicable."""
         return (
             self._validate_metric(metric),
