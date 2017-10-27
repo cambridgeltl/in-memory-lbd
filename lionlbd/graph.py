@@ -110,7 +110,7 @@ class Graph(LbdInterface):
         if exclude_neighbours_of is None:
             excluded_indices = set()    # exclude nothing
         else:
-            x_idx = self._get_node_idx(id_)
+            x_idx = self._get_node_idx(exclude_neighbours_of)
             excluded_indices = set(self._neighbour_indices(x_idx, metric, year))
 
         scores, n_indices = [], []
