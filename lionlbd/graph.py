@@ -339,9 +339,9 @@ class Graph(LbdInterface):
 
     def get_nodes(self, ids, year=None, history=False):
         if year is not None:
-            raise NotImplementedError
+            error('no historical data for nodes, ignoring year {}'.format(year))
         if history:
-            raise NotImplementedError
+            error('no historical data for nodes, ignoring history')
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
         node_id = self._nodes_t.id
