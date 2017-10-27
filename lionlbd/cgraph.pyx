@@ -107,12 +107,22 @@ def reindex_float(int idx_count, int[:] idx_seq, float[:] val_seq, int limit):
     return reindexed
 
 
+cdef float _agg_func_min(float e1_score, float e2_score):
+    return e1_score if e1_score < e2_score else e2_score
+
 cdef float _agg_func_avg(float e1_score, float e2_score):
     return (e1_score + e2_score) / 2.0
 
+cdef float _agg_func_max(float e1_score, float e2_score):
+    return e1_score if e1_score > e2_score else e2_score
+
 cdef agg_func_t _get_agg_function(name):
-    if name == 'avg':
+    if name == 'min':
+        return _agg_func_min
+    elif name == 'avg':
         return _agg_func_avg
+    elif name == 'max':
+        return _agg_func_max
     else:
         raise ValueError('unknown aggregation function {}'.format(name))
 
@@ -120,8 +130,13 @@ cdef agg_func_t _get_agg_function(name):
 cdef float _acc_func_max(float accumulated, float score):
     return accumulated if accumulated > score else score
 
+cdef float _acc_func_sum(float accumulated, float score):
+    return accumulated + score
+
 cdef acc_func_t _get_acc_function(name):
     if name == 'max':
         return _acc_func_max
+    elif name == 'sum':
+        return _acc_func_sum
     else:
         raise ValueError('unknown accumulation function {}'.format(name))

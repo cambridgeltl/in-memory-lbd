@@ -384,10 +384,10 @@ class Graph(LbdInterface):
         return self._metric_ranges[metric]
 
     def get_aggregation_functions(self):
-        return ['avg']    # TODO
+        return ['min', 'avg', 'max']    # TODO
 
     def get_accumulation_functions(self):
-        return ['max']    # TODO
+        return ['sum', 'max']    # TODO
 
     def meta_information(self):
         # convert into JSON-serializable form
@@ -672,6 +672,8 @@ class Graph(LbdInterface):
             return lambda a, b: a + b
         elif name == 'avg':
             return lambda a, b: (a + b) / 2.0
+        elif name == 'max':
+            return lambda a, b: max(a, b)
         elif name is None:
             return lambda a, b: None    # no aggregation / result unused
         else:
