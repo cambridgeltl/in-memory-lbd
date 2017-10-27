@@ -14,18 +14,21 @@ OUTDIR="$SCRIPTDIR/outputs/"
 
 mkdir -p "$OUTDIR"
 
-URL="http://127.0.0.1:8080/neighbours2"
+URL="http://127.0.0.1:8081/neighbours2"
 #IDFILE="data/ids/1000-ids.txt"
 NAME_ID_FILE="$DATADIR/Shamith-genes.txt"
 
 metric="count"
 types=Gene
+extra=Chemical
 
 cat "$NAME_ID_FILE" | while read l; do
     n=$(echo "$l" | awk '{ print $1 }')
     i=$(echo "$l" | awk '{ print $2 }')
     o="$OUTDIR/${n}-2nd-neighbours.PR.json"
     curl -sS "$URL/$i?year_metric=$metric&year=$year&type=$types" > "$o"
+    # TODO make this cleaner
+    curl -sS "$URL/$i?year_metric=$metric&year=$year&type=$types&type=$extra" > "$o.extra"
 done
 
 # cat "$IDFILE" | head -n 10 | while read i; do

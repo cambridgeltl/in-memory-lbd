@@ -107,11 +107,8 @@ class Graph(LbdInterface):
         """
         idx = self._get_node_idx(id_)
 
-        metric = self._validate_metric(metric)
-        year = self._validate_year(year)
-        filters = self._validate_filters(filters)
-        limit = self._validate_limit(limit)
-        offset = self._validate_offset(offset)
+        metric, year, filters, limit, offset = self._validate_common_args(
+            metric, year, filters, limit, offset)
 
         filter_node = self._get_node_filter(filters.b_types)
 
@@ -145,12 +142,10 @@ class Graph(LbdInterface):
                          filters=None, limit=None, offset=0, exists_only=False):
         a_idx, c_idx = self._get_node_idx(a_id), self._get_node_idx(c_id)
 
-        metric = self._validate_metric(metric)
+        metric, year, filters, limit, offset = self._validate_common_args(
+            metric, year, filters, limit, offset)
+
         agg = self._get_agg_function(agg_func)
-        year = self._validate_year(year)
-        filters = self._validate_filters(filters)
-        limit = self._validate_limit(limit)
-        offset = self._validate_offset(offset)
 
         filter_node = self._get_node_filter(filters.b_types)
 
@@ -206,13 +201,11 @@ class Graph(LbdInterface):
         """
         a_idx = self._get_node_idx(a_id)
 
-        metric = self._validate_metric(metric)
+        metric, year, filters, limit, offset = self._validate_common_args(
+            metric, year, filters, limit, offset)
+
         agg_func = self._validate_aggregation_function(agg_func)
         acc_func = self._validate_accumulation_function(acc_func)
-        year = self._validate_year(year)
-        filters = self._validate_filters(filters)
-        limit = self._validate_limit(limit)
-        offset = self._validate_offset(offset)
 
         node_count = self._node_count
 
@@ -468,6 +461,16 @@ class Graph(LbdInterface):
             self._weights_from_cache[metric][year] = reindex_float(
                 self._node_count, self._edges_t.start, edge_weight, idx_after)
         return self._weights_from_cache[metric][year]
+
+    def _validate_common_args(metric, year, filters, limit=None, offset=0):
+        """Validate common arguments, applying defaults when applicable."""
+        return (
+            self._validate_metric(metric),
+            self._validate_year(year),
+            self._validate_filters(filters),
+            self._validate_limit(limit),
+            self._validate_offset(offset)
+        )
 
     def stats_str(self):
         """Return Graph statistics as string."""
