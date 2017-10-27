@@ -247,17 +247,18 @@ class Graph(LbdInterface):
         limit = limit if limit is not None else node_count
         end_idx = offset+limit if limit is not None else len(scores)
 
-        results, result_idx = [], 0
-        build_result = self._get_result_builder(degree=2, type_='lion')
+        node_ids, node_scores, result_idx = [], [], 0
+        node_id = self._nodes_t.id
         for idx in argsorted:
-            if len(results) >= limit:
+            if len(node_ids) >= limit:
                 break
             if not is_c_idx[idx]:
                 continue
             if result_idx >= offset:
-                results.append(build_result(idx, score[idx]))
+                node_ids.append(node_id[idx])
+                node_scores.append(score[idx])
             result_idx += 1
-        return results
+        return node_ids, node_scores
 
     def subgraph_edges(self, nodes, metrics, year=None, filters=None,
                        exclude=None, history=False):
