@@ -99,12 +99,8 @@ class Graph(LbdInterface):
 
     @timed
     def neighbours(self, id_, metric, year=None, filters=None, limit=None,
-                   offset=0, exclude_neighbours_of=None, indices_only=False):
-        """Return neighbours of node.
-
-        Args:
-             indices_only: If True, only return neighbour indices.
-        """
+                   offset=0, exclude_neighbours_of=None):
+        """Return neighbours of node."""
         idx = self._get_node_idx(id_)
 
         metric, year, filters, limit, offset = self._validate_common_args(
@@ -125,17 +121,21 @@ class Graph(LbdInterface):
         end_idx = offset+limit if limit is not None else len(scores)
         end_idx = min(end_idx, len(scores))
 
-        if indices_only:
-            if limit is not None or offset > 0:
-                raise NotImplementedError
-            return n_indices
-        else:
-            node_ids, node_scores = [], []
-            node_id = self._nodes_t.id
-            for idx in argsorted[offset:end_idx]:
-                node_ids.append(node_id[n_indices[idx]])
-                node_scores.append(scores[idx])
-            return node_ids, node_scores
+        node_ids, node_scores = [], []
+        node_id = self._nodes_t.id
+        for idx in argsorted[offset:end_idx]:
+            node_ids.append(node_id[n_indices[idx]])
+            node_scores.append(scores[idx])
+        return node_ids, node_scores
+
+    @timed
+    def _neighbour_indices(self, idx, metric, year):
+        """Internal partial implementation of neighbours()."""
+        # Note: weights_from is here used to implement the implicit
+        # year constraint. The actual metric values are not required.
+        weights_from = self._get_weights_from(metric, year)
+        neighbour_count = len(weights_from[idx])
+        return self._neighbour_idx[idx][:neighbour_count]
 
     @timed
     def closed_discovery(self, a_id, c_id, metric, agg_func, year=None,
@@ -212,7 +212,7 @@ class Graph(LbdInterface):
         # Flag nodes to exclude for fast access in inner loop.
         exclude_idx = array('b', [0]) * node_count
         # TODO: include constraints other than year?
-        b_indices = self.neighbours(a_id, metric, year=year, indices_only=True)
+        b_indices = self._neighbour_indices(a_idx, metric, year)
         for b_idx in b_indices:
             exclude_idx[b_idx] = 1
         exclude_idx[a_idx] = 1
