@@ -105,6 +105,10 @@ class Graph(LbdInterface):
 
         metric, year, filters, limit, offset = self._validate_common_args(
             metric, year, filters, limit, offset)
+        if exclude_neighbours_of == id_:
+            # https://github.com/cambridgeltl/lion-lbd/issues/117
+            raise ValueError('neighbours(): exclude_neighbours_of == id ({})'\
+                             .format(id_))
 
         filter_node = self._get_node_filter(filters.b_types)
         if exclude_neighbours_of is None:
