@@ -262,6 +262,8 @@ class Graph(LbdInterface):
 
     def subgraph_edges(self, nodes, metrics, year=None, filters=None,
                        exclude=None, history=False):
+        if history:
+            raise NotImplementedError('subgraph_edges history')
         if not isinstance(nodes, list):
             nodes = list(nodes)
         node_indices = [self._get_node_idx(i) for i in nodes]
