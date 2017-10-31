@@ -343,8 +343,7 @@ class Graph(LbdInterface):
         return discoverable
 
     def get_nodes(self, ids, year=None, history=False):
-        if year is not None:
-            error('no historical data for nodes, ignoring year {}'.format(year))
+        year = self._validate_year(year)
         if history:
             error('no historical data for nodes, ignoring history')
         indices = [self._get_node_idx(i) for i in ids]
@@ -355,14 +354,20 @@ class Graph(LbdInterface):
         node_count = self._nodes_t.count
         node_doc_count = self._nodes_t.doc_count
         inv_type_map = { v: k for k, v in self._node_type_map.items() }
+        min_year, max_year = self.get_year_range()
         for i in indices:
+            # TODO: https://github.com/cambridgeltl/lion-lbd/issues/125
+            node_year = max_year - len(node_count[i]) + 1
+            if node_year > year:
+                raise ValueError('get_nodes: node_year > year')    # TODO
+            year_idx = year - node_year
             nodes.append({
                 'id': node_id[i],
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
-                'year': 1900,    # TODO
-                'count': node_count[i][-1],
-                'doc_count': node_doc_count[i][-1],
+                'year': node_year,
+                'count': node_count[i][year_idx],
+                'doc_count': node_doc_count[i][year_idx],
                 'edge_count': 100,    # TODO
             })
         return nodes
