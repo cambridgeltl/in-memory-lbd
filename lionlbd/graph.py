@@ -346,8 +346,6 @@ class Graph(LbdInterface):
         year = self._validate_year(year)
         if filters is not None:
             raise NotImplementedError('get_nodes() filters')
-        if history:
-            error('no historical data for nodes, ignoring history')
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
         node_id = self._nodes_t.id
@@ -368,8 +366,10 @@ class Graph(LbdInterface):
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
                 'year': node_year,
-                'count': node_count[i][year_idx],
-                'doc_count': node_doc_count[i][year_idx],
+                'count': (node_count[i][year_idx] if not history
+                          else node_count[i][year_idx:]),
+                'doc_count': (node_doc_count[i][year_idx] if not history
+                              else node_doc_count[i][year_idx:]),
                 'edge_count': 100,    # TODO
             })
         return nodes
