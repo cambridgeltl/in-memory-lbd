@@ -351,7 +351,7 @@ class Graph(LbdInterface):
         node_type = self._nodes_t.type
         node_text = self._nodes_t.text
         node_count = self._nodes_t.count
-        node_doc_count = self._nodes_t.document_count
+        node_doc_count = self._nodes_t.doc_count
         inv_type_map = { v: k for k, v in self._node_type_map.items() }
         for i in indices:
             nodes.append({
@@ -359,8 +359,8 @@ class Graph(LbdInterface):
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
                 'year': 1900,    # TODO
-                'count': node_count[i],
-                'doc_count': node_doc_count[i],
+                'count': node_count[i][-1],
+                'doc_count': node_doc_count[i][-1],
                 'edge_count': 100,    # TODO
             })
         return nodes
