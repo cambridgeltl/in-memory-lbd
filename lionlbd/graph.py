@@ -344,33 +344,37 @@ class Graph(LbdInterface):
 
     def get_nodes(self, ids, year=None, filters=None, history=False):
         year = self._validate_year(year)
-        if filters is not None:
-            raise NotImplementedError('get_nodes() filters')
+        filters = self._validate_filters(filters)
+
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
         node_id = self._nodes_t.id
         node_type = self._nodes_t.type
         node_text = self._nodes_t.text
+        node_year = self._nodes_t.year
         node_count = self._nodes_t.count
         node_doc_count = self._nodes_t.doc_count
         inv_type_map = { v: k for k, v in self._node_type_map.items() }
         min_year, max_year = self.get_year_range()
         for i in indices:
-            # TODO: https://github.com/cambridgeltl/lion-lbd/issues/125
-            node_year = max_year - len(node_count[i]) + 1
-            if node_year > year:
+            i_year = node_year[i]
+            if i_year > year:
                 raise ValueError('get_nodes: node_year > year')    # TODO
-            year_idx = year - node_year
+            year_idx = year - i_year
+            id_ = node_id[i]
+            # TODO: only need neighbour count, avoid creating list and
+            # avoid metric
+            neighbours, _ = self.neighbours(id_, 'count', year, filters)
             nodes.append({
-                'id': node_id[i],
+                'id': id_,
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
-                'year': node_year,
+                'year': i_year,
                 'count': (node_count[i][year_idx] if not history
                           else node_count[i][year_idx:]),
                 'doc_count': (node_doc_count[i][year_idx] if not history
                               else node_doc_count[i][year_idx:]),
-                'edge_count': 100,    # TODO
+                'edge_count': len(neighbours),
             })
         return nodes
 
