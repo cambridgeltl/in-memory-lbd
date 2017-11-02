@@ -161,6 +161,8 @@ class Graph(LbdInterface):
         agg = self._get_agg_function(agg_func)
 
         filter_node = self._get_node_filter(filters.b_types)
+        filter_edge = self._get_weight_filter(filters.min_weight,
+                                              filters.max_weight)
 
         weights_from = self._get_weights_from(metric, year)
 
@@ -176,18 +178,18 @@ class Graph(LbdInterface):
         edge_from_to = self._edge_from_to
         edge_weight = self._weights_by_metric_and_year[metric][year]
         for b_idx, e1_weight in izip(neighbour_idx[a_idx], weights_from[a_idx]):
-            if filter_node(b_idx):
+            if filter_node(b_idx) or filter_edge(e1_weight):
                 continue
-            # TODO e1 weight filter
             e2_idx = edge_from_to[b_idx].get(c_idx)
             if e2_idx is None:
                 continue    # no B-C edge
             if e2_idx >= len(edge_weight):
                 continue    # implicit year filter
+            e2_weight = edge_weight[e2_idx]
+            if filter_edge(e2_weight):
+                continue
             if exists_only:
                 return True
-            e2_weight = edge_weight[e2_idx]
-            # TODO e2 weight filter
             scores.append(agg(e1_weight, e2_weight))
             b_indices.append(b_idx)
 
