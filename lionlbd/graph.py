@@ -342,9 +342,14 @@ class Graph(LbdInterface):
             })
         return discoverable
 
-    def get_nodes(self, ids, year=None, filters=None, history=False):
+    def get_nodes(self, ids, metric=None, year=None, filters=None,
+                  exclude_neighbours_of=None, history=False):
         year = self._validate_year(year)
         filters = self._validate_filters(filters)
+        if metric is not None:
+            raise NotImplementedError
+        if exclude_neighbours_of is not None:
+            raise NotImplementedError
 
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
