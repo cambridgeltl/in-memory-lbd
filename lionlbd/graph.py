@@ -344,12 +344,9 @@ class Graph(LbdInterface):
 
     def get_nodes(self, ids, metric=None, year=None, filters=None,
                   exclude_neighbours_of=None, history=False):
+        metric = self._validate_metric(metric)
         year = self._validate_year(year)
         filters = self._validate_filters(filters)
-        if metric is not None:
-            raise NotImplementedError
-        if exclude_neighbours_of is not None:
-            raise NotImplementedError
 
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
@@ -369,7 +366,9 @@ class Graph(LbdInterface):
             id_ = node_id[i]
             # TODO: only need neighbour count, avoid creating list and
             # avoid metric
-            neighbours, _ = self.neighbours(id_, 'count', year, filters)
+            neighbours, _ = self.neighbours(
+                id_, metric=metric, year=year, filters=filters,
+                exclude_neighbours_of=exclude_neighbours_of)
             nodes.append({
                 'id': id_,
                 'type': inv_type_map[node_type[i]],
