@@ -243,10 +243,12 @@ class Graph(LbdInterface):
         weights_from = self._get_weights_from(metric, year)
 
         filter_b_node = self._get_node_filter(filters.b_types)
+        filter_edge = self._get_weight_filter(filters.min_weight,
+                                              filters.max_weight)
 
         open_discovery_core(a_idx, neighbour_idx, weights_from, score,
                             is_c_idx, exclude_idx, filter_b_node,
-                            agg_func, acc_func)
+                            filter_edge, agg_func, acc_func)
 
         argsorted = argsort(score)[::-1]    # TODO: argpartition if limit?
         limit = limit if limit is not None else node_count

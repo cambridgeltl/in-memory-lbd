@@ -30,6 +30,7 @@ def open_discovery_core(int a_idx,
                         array.array is_c_idx,
                         array.array exclude_idx,
                         filter_b_node,
+                        filter_edge,
                         agg, acc):
     cdef int b_idx, c_idx
     cdef score_t e1_weight, e2_weight
@@ -49,12 +50,16 @@ def open_discovery_core(int a_idx,
         if filter_b_node(b_idx):
             continue
         e1_weight = weights_from[a_idx][i1]
+        if filter_edge(e1_weight):
+            continue
         i2_limit = min((len(neighbour_idx[b_idx]), len(weights_from[b_idx])))
         for i2 in xrange(i2_limit):
             c_idx = neighbour_idx[b_idx][i2]
             if c_exclude_idx[c_idx]:
                 continue
             e2_weight = weights_from[b_idx][i2]
+            if filter_edge(e2_weight):
+                continue
             c_score[c_idx] = c_acc(c_score[c_idx], c_agg(e1_weight, e2_weight))
             c_is_c_idx[c_idx] = 1
 
