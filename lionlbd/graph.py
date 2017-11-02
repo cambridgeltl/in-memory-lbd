@@ -111,6 +111,8 @@ class Graph(LbdInterface):
                              .format(id_))
 
         filter_node = self._get_node_filter(filters.b_types)
+        filter_edge = self._get_weight_filter(filters.min_weight,
+                                              filters.max_weight)
         if exclude_neighbours_of is None:
             excluded_indices = set()    # exclude nothing
         else:
@@ -121,7 +123,8 @@ class Graph(LbdInterface):
         neighbour_idx = self._neighbour_idx
         weights_from = self._get_weights_from(metric, year)
         for n_idx, e_weight in izip(neighbour_idx[idx], weights_from[idx]):
-            if filter_node(n_idx) or n_idx in excluded_indices:
+            if (filter_node(n_idx) or filter_edge(e_weight) or
+                n_idx in excluded_indices):
                 continue
             scores.append(e_weight)
             n_indices.append(n_idx)
@@ -438,6 +441,18 @@ class Graph(LbdInterface):
             # debug('type_mask {} for {}'.format(type_mask, types))
             node_types = self._nodes_t.type
             return lambda n_idx: not (node_types[n_idx] & type_mask)
+
+    def _get_weight_filter(self, min_weight=None, max_weight=None):
+        """Return function determining whether to filter out an edge."""
+        if min_weight is None and max_weight is None:
+            return lambda w: False
+        elif min_weight is not None and max_weight is None:
+            return lambda w: w < min_weight
+        elif min_weight is None and max_weight is not None:
+            return lambda w: w > max_weight
+        else:
+            assert min_weight is not None and max_weight is not None
+            return lambda w: w < min_weight or w > max_weight
 
     @timed
     def _get_weights_from(self, metric, year):
