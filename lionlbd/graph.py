@@ -107,8 +107,8 @@ class Graph(LbdInterface):
             metric, year, filters, limit, offset)
         if exclude_neighbours_of == id_:
             # https://github.com/cambridgeltl/lion-lbd/issues/117
-            raise ValueError('neighbours(): exclude_neighbours_of == id ({})'\
-                             .format(id_))
+            error('neighbours(): exclude_neighbours_of == id ({})'.format(id_))
+            exclude_neighbours_of = None    # ignore
 
         filter_node = self._get_node_filter(filters.b_types)
         filter_edge = self._get_weight_filter(filters.min_weight,
