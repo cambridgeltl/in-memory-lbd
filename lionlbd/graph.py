@@ -267,6 +267,8 @@ class Graph(LbdInterface):
 
     def subgraph_edges(self, nodes, metrics, year=None, filters=None,
                        exclude=None, history=False):
+        if not metrics:
+            raise ValueError('no metrics')
         if history:
             raise NotImplementedError('subgraph_edges history')
         if not isinstance(nodes, list):
@@ -282,8 +284,9 @@ class Graph(LbdInterface):
         metric_weights = [(m, self._weights_by_metric_and_year[m][year])
                           for m in metrics]
 
-        # Note: the following assumes that edges are symmetric.
-        # TODO filters
+        filter_edge = self._get_weight_filter(filters.min_weight,
+                                              filters.max_weight)
+
         edges = []
         edge_year = self._edges_t.year
         node_id_idx = zip(nodes, node_indices)
@@ -297,6 +300,9 @@ class Graph(LbdInterface):
                     continue    # no edge there
                 if edge_year[edge_idx] > year:
                     continue    # edge only appears after given year
+                filtered_weight = metric_weights[0][1]
+                if filter_edge(filtered_weight[edge_idx]):
+                    continue
                 edge = {
                     'start': n1_id,
                     'end': n2_id,
