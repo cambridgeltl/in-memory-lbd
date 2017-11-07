@@ -295,6 +295,7 @@ class Graph(LbdInterface):
 
         edges = []
         edge_year = self._edges_t.year
+        edge_type = self._edges_t.type
         node_id_idx = zip(nodes, node_indices)
         for i, (n1_id, n1_idx) in enumerate(node_id_idx):
             for j in xrange(i+1, len(node_indices)):
@@ -312,6 +313,7 @@ class Graph(LbdInterface):
                 edge = {
                     'start': n1_id,
                     'end': n2_id,
+                    'type': edge_type[edge_idx],
                     'year': edge_year[edge_idx],
                 }
                 for metric, score_type, weights in metric_type_weights:
