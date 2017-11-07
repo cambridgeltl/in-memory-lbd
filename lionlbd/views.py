@@ -78,7 +78,7 @@ def extend_graph(id_):
     # TODO existing nodes
 
     try:
-        neighbours = graph.neighbours(
+        node_ids, node_scores = graph.neighbours(
             id_,
             metric=metric,
             year=year,
@@ -90,15 +90,21 @@ def extend_graph(id_):
         warn(e)
         abort(404)
 
-    node_ids = [id_] + [n['B'] for n in neighbours]
-    edges = graph.subgraph(
+    nodes = graph.get_nodes(
+        node_ids,
+        'count',
+        year=year,
+        filters=filters
+    )
+
+    edges = graph.subgraph_edges(
         node_ids,
         ['count'],
         year=year,
         filters=filters
     )
 
-    return jsonify([neighbours, edges])
+    return jsonify([nodes, edges])
 
     
 @app.route('/neighbours/<id_>')
