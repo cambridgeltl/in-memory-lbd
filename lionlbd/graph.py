@@ -138,6 +138,8 @@ class Graph(LbdInterface):
         for idx in argsorted[offset:end_idx]:
             node_ids.append(node_id[n_indices[idx]])
             node_scores.append(scores[idx])
+        score_type = self._metric_type(metric)
+        node_scores = [score_type(s) for s in node_scores]
         return node_ids, node_scores
 
     @timed
@@ -282,9 +284,11 @@ class Graph(LbdInterface):
         exclude = [] if exclude is None else exclude
         exclude_indices = set([self._get_node_idx(i) for i in exclude])
 
-        # get edge weights for requested metrics and given year
-        metric_weights = [(m, self._weights_by_metric_and_year[m][year])
-                          for m in metrics]
+        # get metric types and edge weights for requested metrics and given year
+        metric_type_weights = [
+            (m, self._metric_type(m), self._weights_by_metric_and_year[m][year])
+            for m in metrics
+        ]
 
         filter_edge = self._get_weight_filter(filters.min_weight,
                                               filters.max_weight)
@@ -302,7 +306,7 @@ class Graph(LbdInterface):
                     continue    # no edge there
                 if edge_year[edge_idx] > year:
                     continue    # edge only appears after given year
-                filtered_weight = metric_weights[0][1]
+                filtered_weight = metric_type_weights[0][2]
                 if filter_edge(filtered_weight[edge_idx]):
                     continue
                 edge = {
@@ -310,8 +314,8 @@ class Graph(LbdInterface):
                     'end': n2_id,
                     'year': edge_year[edge_idx],
                 }
-                for metric, weights in metric_weights:
-                    edge[metric] = weights[edge_idx]
+                for metric, score_type, weights in metric_type_weights:
+                    edge[metric] = score_type(weights[edge_idx])
                 edges.append(edge)
 
         return edges
@@ -361,6 +365,9 @@ class Graph(LbdInterface):
         year = self._validate_year(year)
         filters = self._validate_filters(filters)
 
+        def get_counts(sequence, idx, history):
+            return sequence[idx] if not history else sequence[:idx]
+
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
         node_id = self._nodes_t.id
@@ -370,7 +377,6 @@ class Graph(LbdInterface):
         node_count = self._nodes_t.count
         node_doc_count = self._nodes_t.doc_count
         inv_type_map = { v: k for k, v in self._node_type_map.items() }
-        min_year, max_year = self.get_year_range()
         for i in indices:
             i_year = node_year[i]
             if i_year > year:
@@ -387,10 +393,8 @@ class Graph(LbdInterface):
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
                 'year': i_year,
-                'count': (node_count[i][year_idx] if not history
-                          else node_count[i][year_idx:]),
-                'doc_count': (node_doc_count[i][year_idx] if not history
-                              else node_doc_count[i][year_idx:]),
+                'count': get_counts(node_count[i], year_idx, history),
+                'doc_count': get_counts(node_doc_count[i], year_idx, history),
                 'edge_count': len(neighbours),
             })
         return nodes
