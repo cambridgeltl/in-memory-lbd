@@ -368,7 +368,7 @@ class Graph(LbdInterface):
         filters = self._validate_filters(filters)
 
         def get_counts(sequence, idx, history):
-            return sequence[idx] if not history else sequence[:idx]
+            return sequence[idx] if not history else list(sequence[:idx])
 
         indices = [self._get_node_idx(i) for i in ids]
         nodes = []
