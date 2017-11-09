@@ -473,18 +473,21 @@ class Graph(LbdInterface):
             return lambda w: w < min_weight or w > max_weight
 
     @timed
+    def _calculate_weights_from(self, metric, year):
+        info('calculating weights_from for metric {}, year {} ...'.format(
+            metric, year))
+        edge_weight = self._weights_by_metric_and_year[metric][year]
+        type_code = array_type_code(self._metric_type(metric))
+        idx_after = bisect(self._edges_t.year, year)    # sorted by year
+        return reindex_float(self._node_count, self._edges_t.start,
+                             edge_weight, idx_after)
+
     def _get_weights_from(self, metric, year):
         if metric not in self._weights_from_cache:
             self._weights_from_cache[metric] = {}
         if year not in self._weights_from_cache[metric]:
-            # lazy init
-            info('calculating weights_from for metric {}, year {} ...'.format(
-                metric, year))
-            edge_weight = self._weights_by_metric_and_year[metric][year]
-            type_code = array_type_code(self._metric_type(metric))
-            idx_after = bisect(self._edges_t.year, year)    # sorted by year
-            self._weights_from_cache[metric][year] = reindex_float(
-                self._node_count, self._edges_t.start, edge_weight, idx_after)
+            self._weights_from_cache[metric][year] \
+                = self._calculate_weights_from(metric, year)
         return self._weights_from_cache[metric][year]
 
     def _validate_common_args(self, metric, year, filters, limit=None,
