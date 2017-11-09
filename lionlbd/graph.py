@@ -363,14 +363,16 @@ class Graph(LbdInterface):
 
     def get_nodes(self, ids, metric=None, year=None, filters=None,
                   exclude_neighbours_of=None, history=False):
+        indices = [self._get_node_idx(i) for i in ids]
         metric = self._validate_metric(metric)
         year = self._validate_year(year)
         filters = self._validate_filters(filters)
 
-        def get_counts(sequence, idx, history):
-            return sequence[idx] if not history else list(sequence[:idx])
+        if not history:
+            get_counts = lambda seq, idx: seq[idx]
+        else:
+            get_counts = lambda seq, idx: list(seq[:idx])
 
-        indices = [self._get_node_idx(i) for i in ids]
         nodes = []
         node_id = self._nodes_t.id
         node_type = self._nodes_t.type
@@ -395,8 +397,8 @@ class Graph(LbdInterface):
                 'type': inv_type_map[node_type[i]],
                 'text': node_text[i],
                 'year': i_year,
-                'count': get_counts(node_count[i], year_idx, history),
-                'doc_count': get_counts(node_doc_count[i], year_idx, history),
+                'count': get_counts(node_count[i], year_idx),
+                'doc_count': get_counts(node_doc_count[i], year_idx),
                 'edge_count': len(neighbours),
             })
         return nodes
