@@ -269,12 +269,29 @@ class Graph(LbdInterface):
             result_idx += 1
         return node_ids, node_scores
 
+    def _get_metric_data_filler(self, metrics, year, history):
+        """Return function filling in metric values for edge."""
+        # Helper for subgraph_edges()
+        mtype, weight = self._metric_type, self._weights_by_metric_and_year
+        if not history:
+            metric_data = [(m, mtype(m), weight[m][year]) for m in metrics]
+            def fill_metric_values(edge, idx):
+                for metric, type_, edge_weight in metric_data:
+                    edge[metric] = type_(edge_weight[idx])
+            return fill_metric_values
+        else:
+            metric_data = [(m, mtype(m), weight[m]) for m in metrics]
+            edge_year = self._edges_t.year
+            def fill_metric_values(edge, idx):
+                for metric, type_, edge_weight in metric_data:
+                    edge[metric] = [type_(edge_weight[y][idx])
+                                    for y in xrange(edge_year[idx], year+1)]
+            return fill_metric_values
+
     def subgraph_edges(self, nodes, metrics, year=None, filters=None,
                        exclude=None, history=False):
         if not metrics:
             raise ValueError('no metrics')
-        if history:
-            raise NotImplementedError('subgraph_edges history')
         if not isinstance(nodes, list):
             nodes = list(nodes)
         node_indices = [self._get_node_idx(i) for i in nodes]
@@ -284,14 +301,11 @@ class Graph(LbdInterface):
         exclude = [] if exclude is None else exclude
         exclude_indices = set([self._get_node_idx(i) for i in exclude])
 
-        # get metric types and edge weights for requested metrics and given year
-        metric_type_weights = [
-            (m, self._metric_type(m), self._weights_by_metric_and_year[m][year])
-            for m in metrics
-        ]
-
         filter_edge = self._get_weight_filter(filters.min_weight,
                                               filters.max_weight)
+        filtered_weight = self._weights_by_metric_and_year[metrics[0]][year]
+        fill_metric_values = self._get_metric_data_filler(metrics, year,
+                                                          history)
 
         edges = []
         edge_year = self._edges_t.year
@@ -307,7 +321,6 @@ class Graph(LbdInterface):
                     continue    # no edge there
                 if edge_year[edge_idx] > year:
                     continue    # edge only appears after given year
-                filtered_weight = metric_type_weights[0][2]
                 if filter_edge(filtered_weight[edge_idx]):
                     continue
                 edge = {
@@ -316,8 +329,7 @@ class Graph(LbdInterface):
                     'type': edge_type[edge_idx],
                     'year': edge_year[edge_idx],
                 }
-                for metric, score_type, weights in metric_type_weights:
-                    edge[metric] = score_type(weights[edge_idx])
+                fill_metric_values(edge, edge_idx)
                 edges.append(edge)
 
         return edges
