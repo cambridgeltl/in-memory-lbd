@@ -43,5 +43,5 @@ LIMIT_PARAMETER = 'limit'
 OFFSET_PARAMETER = 'offset'
 
 # Naming convention for metrics in edge data
-METRIC_PREFIX = ''
-METRIC_SUFFIX = '_hist'
+METRIC_PREFIX = 'metric_'
+METRIC_SUFFIX = ''
