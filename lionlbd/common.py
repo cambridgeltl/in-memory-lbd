@@ -10,6 +10,7 @@ from flask import request
 from array import array
 from functools import wraps
 from collections import defaultdict
+from itertools import islice
 from logging import debug, info
 
 from lionlbd.config import YEAR_PARAMETER, UNTIL_PARAMETER, METRIC_PARAMETER
@@ -144,14 +145,38 @@ def _func_name(func, *args):
         return '{}.{}'.format(type(args[0]).__name__, func.__name__)
 
 
+def _trunc(arg, max_len):
+    """Pretty output helper for decorators."""
+    # Truncate argument to max_len
+    if isinstance(arg, (int, float, bool, str)):
+        return arg
+    if isinstance(arg, (list, tuple, array)):
+        if len(arg) > max_len:
+            arg = arg[:max_len]
+            if isinstance(arg, array):
+                arg = list(arg)   # mixed types
+            arg.append('...')
+        arg = type(arg)([_trunc(a, max_len) for a in arg])
+        return arg
+    elif isinstance(arg, dict):
+        if len(arg) > max_len:
+            arg = { k: arg[k] for k in islice(arg.iterkeys(), max_len) }
+        arg = {
+            _trunc(k, max_len): _trunc(v, max_len)
+            for k, v in arg.iteritems()
+        }
+        return str(arg)[:-1] + '...}'    # cheat
+    else:
+        return str(arg)
+
+
 def _arg_str(func, *args, **argv):
     """Pretty output helper for decorators."""
     max_args, max_len = 1, 1
     if _is_method(func):
         args = args[1:]    # skip self
     abbr = args if len(args) <= max_args else args[:max_args] + ('...',)
-    abbr = [a if not (isinstance(a, (list, tuple, array)) and len(a) > max_len)
-            else str(a[:max_len]) + '...' for a in abbr]
+    abbr = [_trunc(a, max_len) for a in abbr]
     s = ', '.join([str(a) for a in abbr] +
                   ['{}={}'.format(k, v) for k, v in argv.items()])
     if len(s) > 80:
