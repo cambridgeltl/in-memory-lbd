@@ -90,7 +90,10 @@ def _format_usage(usage, unit):
 
 
 def memory_usage(unit=None):
-    import psutil
+    try:
+        import psutil
+    except ImportError:
+        return '<ERR:no psutil>'
     process = psutil.Process(os.getpid())
     usage = process.memory_info().rss
     return _format_usage(usage, unit)
