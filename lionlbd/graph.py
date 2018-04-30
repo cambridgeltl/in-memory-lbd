@@ -338,7 +338,7 @@ class Graph(LbdInterface):
         # validate after and until parameters
         min_year, max_year = self.get_year_range()
         if after <= min_year:
-            raise ValueError('after ({}) <= max ({})'.format(after, min_year))
+            raise ValueError('after ({}) <= min ({})'.format(after, min_year))
         if after >= max_year:
             raise ValueError('after ({}) >= max ({})'.format(after, max_year))
         if until is not None and until <= after:
